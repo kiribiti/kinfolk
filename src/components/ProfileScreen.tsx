@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
 import { Heart, MessageCircle, Camera, Settings, MapPin, ExternalLink, Calendar } from 'lucide-react';
-import { User, Theme, Post } from '../types';
-import { PostComponent } from './PostComponent';
+import { User, Theme, Story } from '../types';
+import { StoryComponent } from './StoryComponent';
 import { EditProfileModal } from './EditProfileModal';
 
 interface ProfileScreenProps {
   user: User;
   currentUser: User;
   theme: Theme;
-  posts: Post[];
-  onLike: (postId: number) => void;
-  onDelete: (postId: number) => void;
-  onUpdate: (postId: number, content: string) => void;
+  stories: Story[];
+  onLike: (storyId: number) => void;
+  onDelete: (storyId: number) => void;
+  onUpdate: (storyId: number, content: string) => void;
   onComment: (parentId: number, content: string) => void;
   onViewProfile?: (userId: number) => void;
-  onViewPost?: (postId: number) => void;
+  onViewStory?: (storyId: number) => void;
   onUserUpdate: (updatedUser: User) => void;
   hydratedPostIds: Set<number>;
 }
@@ -23,23 +23,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   user,
   currentUser,
   theme,
-  posts,
+  stories,
   onLike,
   onDelete,
   onUpdate,
   onComment,
   onViewProfile,
-  onViewPost,
+  onViewStory,
   onUserUpdate,
   hydratedPostIds
 }) => {
-  const [activeProfileTab, setActiveProfileTab] = useState<'posts' | 'media' | 'likes'>('posts');
+  const [activeProfileTab, setActiveProfileTab] = useState<'stories' | 'media' | 'likes'>('stories');
   const [isEditing, setIsEditing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   const isOwnProfile = user.id === currentUser.id;
-  const userPosts = posts.filter(p => p.userId === user.id);
-  const userMediaPosts = userPosts.filter(p => p.media && p.media.length > 0);
+  const userStories = stories.filter(p => p.userId === user.id);
+  const userMediaStories = userStories.filter(p => p.media && p.media.length > 0);
 
   const handleSaveProfile = (updatedFields: Partial<User>) => {
     const updatedUser = { ...user, ...updatedFields };
@@ -166,9 +166,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <div className="flex gap-6 pt-4 border-t" style={{ borderColor: theme.accent }}>
               <div>
                 <span className="font-bold text-lg" style={{ color: theme.text }}>
-                  {userPosts.length}
+                  {userStories.length}
                 </span>
-                <span className="text-gray-500 ml-1">Posts</span>
+                <span className="text-gray-500 ml-1">Stories</span>
               </div>
               <div>
                 <span className="font-bold text-lg" style={{ color: theme.text }}>
@@ -194,14 +194,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       }}>
         <div className="flex border-b" style={{ borderColor: theme.accent }}>
           <button
-            onClick={() => setActiveProfileTab('posts')}
+            onClick={() => setActiveProfileTab('stories')}
             className="flex-1 px-6 py-4 font-medium transition-colors"
             style={{
-              color: activeProfileTab === 'posts' ? theme.primary : theme.text,
-              borderBottom: activeProfileTab === 'posts' ? `2px solid ${theme.primary}` : 'none'
+              color: activeProfileTab === 'stories' ? theme.primary : theme.text,
+              borderBottom: activeProfileTab === 'stories' ? `2px solid ${theme.primary}` : 'none'
             }}
           >
-            Posts
+            Stories
           </button>
           <button
             onClick={() => setActiveProfileTab('media')}
@@ -226,30 +226,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
 
         <div className="p-6">
-          {activeProfileTab === 'posts' && (
+          {activeProfileTab === 'stories' && (
             <div className="space-y-4">
-              {userPosts.length > 0 ? (
-                userPosts.filter(p => !p.parentId).map(post => (
-                  <PostComponent
+              {userStories.length > 0 ? (
+                userStories.filter(p => !p.parentId).map(post => (
+                  <StoryComponent
                     key={post.id}
-                    post={post}
+                    story={post}
                     user={user}
                     onLike={onLike}
                     onDelete={onDelete}
                     onUpdate={onUpdate}
                     onComment={onComment}
                     onViewProfile={onViewProfile}
-                    onViewPost={onViewPost}
+                    onViewStory={onViewStory}
                     currentUserId={currentUser.id}
                     isHydrated={hydratedPostIds.has(post.id)}
                     theme={theme}
-                    allPosts={posts}
+                    allStories={stories}
                   />
                 ))
               ) : (
                 <div className="text-center py-12">
                   <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-500">No posts yet</p>
+                  <p className="text-gray-500">No stories yet</p>
                 </div>
               )}
             </div>
@@ -257,9 +257,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
           {activeProfileTab === 'media' && (
             <div>
-              {userMediaPosts.length > 0 ? (
+              {userMediaStories.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2">
-                  {userMediaPosts.map(post =>
+                  {userMediaStories.map(post =>
                     post.media?.map(file => (
                       <div key={file.id} className="aspect-square rounded-lg overflow-hidden">
                         {file.type === 'image' ? (
@@ -283,7 +283,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {activeProfileTab === 'likes' && (
             <div className="text-center py-12">
               <Heart className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-gray-500">Liked posts appear here</p>
+              <p className="text-gray-500">Liked stories appear here</p>
             </div>
           )}
         </div>

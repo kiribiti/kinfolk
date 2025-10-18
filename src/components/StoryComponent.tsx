@@ -1,75 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, Trash2, Edit2, X, Check } from 'lucide-react';
-import { Post, Theme, RecentActivity, User } from '../types';
+import { Story, Theme, RecentActivity, User } from '../types';
 import { mockUsers } from '../data/mockData';
 import { Avatar } from './Avatar';
 import { Comment } from './Comment';
 
-interface PostComponentProps{
-  post: Post;
+interface StoryComponentProps{
+  story: Story;
   user: User;
-  onLike: (postId: number) => void;
-  onDelete: (postId: number) => void;
-  onUpdate: (postId: number, content: string) => void;
+  onLike: (storyId: number) => void;
+  onDelete: (storyId: number) => void;
+  onUpdate: (storyId: number, content: string) => void;
   onComment: (parentId: number, content: string) => void;
   onViewProfile?: (userId: number) => void;
-  onViewPost?: (postId: number) => void;
+  onViewStory?: (storyId: number) => void;
   currentUserId: number;
   isHydrated: boolean;
   theme: Theme;
-  allPosts: Post[];
+  allStories: Story[];
   expandComments?: boolean;
 }
 
-export const PostComponent: React.FC<PostComponentProps> = ({
-  post,
+export const StoryComponent: React.FC<StoryComponentProps> = ({
+  story,
   user,
   onLike,
   onDelete,
   onUpdate,
   onComment,
   onViewProfile,
-  onViewPost,
+  onViewStory,
   currentUserId,
   isHydrated,
   theme,
-  allPosts,
+  allStories,
   expandComments = false
 }) => {
   const [animateLike, setAnimateLike] = useState(false);
   const [animateComment, setAnimateComment] = useState(false);
   const [showComments, setShowComments] = useState(expandComments);
   const [recentActivity, setRecentActivity] = useState<RecentActivity | null>(null);
-  const [isNewPost, setIsNewPost] = useState(post.isNew || false);
+  const [isNewStory, setIsNewStory] = useState(story?.isNew || false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(post.content);
+  const [editContent, setEditContent] = useState(story?.content || '');
   const [showMenu, setShowMenu] = useState(false);
   const [commentContent, setCommentContent] = useState('');
 
-  const isLiked = post.likedBy.includes(currentUserId);
-  const isOwner = post.userId === currentUserId;
+  // Safety check: return null if story is undefined
+  if (!story || !user) {
+    return null;
+  }
 
-  // Get child posts (comments) for this post
-  const childPosts = allPosts.filter(p => p.parentId === post.id);
-  const commentCount = childPosts.length;
+  const isLiked = story.likedBy?.includes(currentUserId) || false;
+  const isOwner = story.userId === currentUserId;
+
+  // Get child stories (comments) for this story
+  const childStories = allStories.filter(s => s.parentId === story.id);
+  const commentCount = childStories.length;
 
   useEffect(() => {
-    if (isNewPost) {
-      const timer = setTimeout(() => setIsNewPost(false), 5000);
+    if (isNewStory) {
+      const timer = setTimeout(() => setIsNewStory(false), 5000);
       return () => clearTimeout(timer);
     }
-  }, [isNewPost]);
+  }, [isNewStory]);
 
   useEffect(() => {
-    if (post.likes !== post.previousLikes && post.previousLikes !== undefined) {
+    if (story.likes !== story.previousLikes && story.previousLikes !== undefined) {
       setAnimateLike(true);
-      if (post.lastActivityUserId) {
-        const activityUser = mockUsers.find(u => u.id === post.lastActivityUserId);
+      if (story.lastActivityUserId) {
+        const activityUser = mockUsers.find(u => u.id === story.lastActivityUserId);
         if (activityUser) {
           setRecentActivity({
             type: 'like',
             user: activityUser,
-            action: post.likes > post.previousLikes ? 'liked' : 'unliked'
+            action: story.likes > story.previousLikes ? 'liked' : 'unliked'
           });
         }
       }
@@ -78,13 +83,13 @@ export const PostComponent: React.FC<PostComponentProps> = ({
         setRecentActivity(null);
       }, 3000);
     }
-  }, [post.likes, post.previousLikes, post.lastActivityUserId]);
+  }, [story.likes, story.previousLikes, story.lastActivityUserId]);
 
   useEffect(() => {
-    if (post.comments !== post.previousComments && post.previousComments !== undefined) {
+    if (story.comments !== story.previousComments && story.previousComments !== undefined) {
       setAnimateComment(true);
-      if (post.lastActivityUserId) {
-        const activityUser = mockUsers.find(u => u.id === post.lastActivityUserId);
+      if (story.lastActivityUserId) {
+        const activityUser = mockUsers.find(u => u.id === story.lastActivityUserId);
         if (activityUser) {
           setRecentActivity({
             type: 'comment',
@@ -98,10 +103,10 @@ export const PostComponent: React.FC<PostComponentProps> = ({
         setRecentActivity(null);
       }, 3000);
     }
-  }, [post.comments, post.previousComments, post.lastActivityUserId]);
+  }, [story.comments, story.previousComments, story.lastActivityUserId]);
 
   const handleLike = () => {
-    onLike(post.id);
+    onLike(story.id);
   };
 
   const handleEdit = () => {
@@ -110,27 +115,27 @@ export const PostComponent: React.FC<PostComponentProps> = ({
   };
 
   const handleSaveEdit = () => {
-    if (editContent.trim() && editContent !== post.content) {
-      onUpdate(post.id, editContent);
+    if (editContent.trim() && editContent !== story.content) {
+      onUpdate(story.id, editContent);
     }
     setIsEditing(false);
   };
 
   const handleCancelEdit = () => {
-    setEditContent(post.content);
+    setEditContent(story.content);
     setIsEditing(false);
   };
 
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      onDelete(post.id);
+    if (window.confirm('Are you sure you want to delete this story?')) {
+      onDelete(story.id);
     }
     setShowMenu(false);
   };
 
   const handleSubmitComment = () => {
     if (commentContent.trim()) {
-      onComment(post.id, commentContent.trim());
+      onComment(story.id, commentContent.trim());
       setCommentContent('');
     }
   };
@@ -145,11 +150,11 @@ export const PostComponent: React.FC<PostComponentProps> = ({
   return (
     <div className={`rounded-lg border p-6 transition-all relative overflow-hidden ${
       isHydrated ? 'shadow-md' : ''
-    } ${isNewPost ? 'animate-slide-in' : ''}`} style={{
+    } ${isNewStory ? 'animate-slide-in' : ''}`} style={{
       backgroundColor: theme.id === 'midnight' ? '#2C2C2E' : '#FFFFFF',
       borderColor: isHydrated ? theme.primary : theme.accent
     }}>
-      {isNewPost && (
+      {isNewStory && (
         <div className="absolute top-4 right-4 text-white text-xs font-bold px-3 py-1 rounded-full" style={{
           backgroundColor: theme.primary
         }}>
@@ -171,7 +176,7 @@ export const PostComponent: React.FC<PostComponentProps> = ({
         }}>
           <Avatar user={recentActivity.user} size="sm" theme={theme} />
           <span>
-            <strong>{recentActivity.user.name}</strong> {recentActivity.action} this post
+            <strong>{recentActivity.user.name}</strong> {recentActivity.action} this story
           </span>
         </div>
       )}
@@ -205,10 +210,10 @@ export const PostComponent: React.FC<PostComponentProps> = ({
             </button>
             <span className="text-gray-400 text-sm">·</span>
             <button
-              onClick={() => onViewPost?.(post.id)}
+              onClick={() => onViewStory?.(story.id)}
               className="text-gray-400 text-sm hover:underline"
             >
-              {post.timestamp}
+              {story.timestamp}
             </button>
           </div>
 
@@ -251,23 +256,23 @@ export const PostComponent: React.FC<PostComponentProps> = ({
             </div>
           ) : (
             <>
-              <p className="leading-relaxed mb-4" style={{ color: theme.text }}>{post.content}</p>
+              <p className="leading-relaxed mb-4" style={{ color: theme.text }}>{story.content}</p>
 
-              {post.media && post.media.length > 0 && (
+              {story.media && story.media.length > 0 && (
                 <div className={`mb-4 grid gap-2 ${
-                  post.media.length === 1 ? 'grid-cols-1' :
-                  post.media.length === 2 ? 'grid-cols-2' :
-                  post.media.length === 3 ? 'grid-cols-3' :
+                  story.media.length === 1 ? 'grid-cols-1' :
+                  story.media.length === 2 ? 'grid-cols-2' :
+                  story.media.length === 3 ? 'grid-cols-3' :
                   'grid-cols-2'
                 }`}>
-                  {post.media.map((file, idx) => (
+                  {story.media.map((file, idx) => (
                     <div key={file.id} className={`relative rounded-lg overflow-hidden ${
-                      post.media!.length === 3 && idx === 0 ? 'col-span-2' : ''
+                      story.media!.length === 3 && idx === 0 ? 'col-span-2' : ''
                     }`}>
                       {file.type === 'image' ? (
                         <img
                           src={file.url}
-                          alt="Post media"
+                          alt="Story media"
                           className="w-full h-full object-cover max-h-96"
                         />
                       ) : (
@@ -294,7 +299,7 @@ export const PostComponent: React.FC<PostComponentProps> = ({
               <span className={`text-sm font-medium transition-all ${animateLike ? 'font-bold' : ''}`} style={{
                 color: animateLike ? theme.primary : undefined
               }}>
-                {post.likes}
+                {story.likes}
               </span>
             </button>
 
@@ -336,7 +341,7 @@ export const PostComponent: React.FC<PostComponentProps> = ({
                       onMouseOut={(e) => theme.id === 'midnight' && (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <Edit2 className="w-4 h-4" />
-                      Edit post
+                      Edit story
                     </button>
                     <button
                       onClick={handleDelete}
@@ -345,7 +350,7 @@ export const PostComponent: React.FC<PostComponentProps> = ({
                       onMouseOut={(e) => theme.id === 'midnight' && (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <Trash2 className="w-4 h-4" />
-                      Delete post
+                      Delete story
                     </button>
                   </div>
                 )}
@@ -384,18 +389,18 @@ export const PostComponent: React.FC<PostComponentProps> = ({
                 </div>
               </div>
 
-              {/* Display child posts (comments) */}
-              {childPosts.length > 0 && (
+              {/* Display child stories (comments) */}
+              {childStories.length > 0 && (
                 <div className="space-y-3 pl-4 border-l-2" style={{ borderColor: theme.accent }}>
-                  {childPosts.map(childPost => (
+                  {childStories.map(childStory => (
                     <Comment
-                      key={childPost.id}
-                      comment={childPost}
-                      allPosts={allPosts}
+                      key={childStory.id}
+                      comment={childStory}
+                      allStories={allStories}
                       theme={theme}
                       onComment={onComment}
                       onViewProfile={onViewProfile}
-                      onViewPost={onViewPost}
+                      onViewStory={onViewStory}
                     />
                   ))}
                 </div>

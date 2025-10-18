@@ -16,13 +16,13 @@ import {
 } from 'lucide-react';
 
 // Import types
-import {Theme, themes, Post, MediaFile, Channel, User, TabType} from './types';
+import {Theme, themes, Story, MediaFile, Channel, User, TabType} from './types';
 
 // Import data and utilities
 import {
     mockUsers,
     channelsDB,
-    postsDB,
+    storiesDB,
     initializeDB,
     ActivitySimulator,
     MockServer,
@@ -31,11 +31,14 @@ import {
 // Import API
 import {ApiService as api} from './api';
 
+// Import localStorage utilities
+import {saveThemeToLocalStorage, loadThemeFromLocalStorage} from './utils/localStorage';
+
 // Import components
 import {Avatar} from './components/Avatar';
 import {ThemeSelector} from './components/ThemeSelector';
 import {Sidebar} from './components/Sidebar';
-import {PostComponent} from './components/PostComponent';
+import {StoryComponent} from './components/StoryComponent';
 import {ChannelManager} from './components/ChannelManager';
 import {ProfileScreen} from './components/ProfileScreen';
 
@@ -44,7 +47,7 @@ import {ProfileScreen} from './components/ProfileScreen';
 // ============================================
 
 const App: React.FC = () => {
-    const [posts, setPosts] = useState<Post[]>([]);
+    const [stories, setStories] = useState<Story[]>([]);
     const [users] = useState<Record<number, User>>(
         mockUsers.reduce((acc, user) => ({...acc, [user.id]: user}), {})
     );
@@ -60,7 +63,18 @@ const App: React.FC = () => {
     const [newPostContent, setNewPostContent] = useState('');
     const [isPosting, setIsPosting] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
-    const [currentTheme, setCurrentTheme] = useState<Theme>(themes[0]);
+    const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
+        // Load theme from localStorage on initialization
+        const savedThemeId = loadThemeFromLocalStorage();
+        if (savedThemeId) {
+            const savedTheme = themes.find(t => t.id === savedThemeId);
+            if (savedTheme) {
+                return savedTheme;
+            }
+        }
+        // Fallback to Kinfolk Heritage (default theme)
+        return themes[0];
+    });
     const [showThemeSelector, setShowThemeSelector] = useState(false);
     const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
@@ -69,11 +83,11 @@ const App: React.FC = () => {
     const [showChannelManager, setShowChannelManager] = useState(false);
     const [showChannelSelector, setShowChannelSelector] = useState(false);
 
-    // Initialize database and load posts
+    // Initialize database and load stories
     useEffect(() => {
         initializeDB();
         setChannels([...channelsDB]);
-        loadPosts();
+        loadStories();
 
         // Set default channel for current user
         const userDefaultChannel = channelsDB.find(
@@ -84,10 +98,10 @@ const App: React.FC = () => {
         }
     }, []);
 
-    const loadPosts = async () => {
-        const response = await api.getPosts();
+    const loadStories = async () => {
+        const response = await api.getStories();
         if (response.success && response.data) {
-            setPosts(response.data);
+            setStories(response.data);
         }
     };
 
@@ -105,25 +119,25 @@ const App: React.FC = () => {
 
         setIsPosting(true);
         try {
-            const response = await api.createPost(
+            const response = await api.createStory(
                 currentUser.id,
                 newPostContent,
                 mediaFiles,
                 selectedChannelId
             );
             if (response.success && response.data) {
-                setPosts(prev => [{...response.data!, isNew: true}, ...prev]);
+                setStories(prev => [{...response.data!, isNew: true}, ...prev]);
                 setNewPostContent('');
                 setMediaFiles([]);
 
                 // Update channel post count
                 setChannels(prev => prev.map(c =>
                     c.id === selectedChannelId
-                        ? {...c, postCount: c.postCount + 1}
+                        ? {...c, storyCount: c.storyCount + 1}
                         : c
                 ));
 
-                showNotification('Post created successfully! 🎉');
+                showNotification('Story created successfully! 🎉');
             } else {
                 showNotification(response.error || 'Failed to create post');
             }
@@ -193,11 +207,11 @@ const App: React.FC = () => {
         }
         setChannels([...channelsDB]);
 
-        // Delete posts from this channel
-        const postsToKeep = postsDB.filter(p => p.channelId !== channelId);
-        postsDB.length = 0;
-        postsDB.push(...postsToKeep);
-        setPosts([...postsDB]);
+        // Delete stories from this channel
+        const storiesToKeep = storiesDB.filter(p => p.channelId !== channelId);
+        storiesDB.length = 0;
+        storiesDB.push(...storiesToKeep);
+        setStories([...storiesDB]);
 
         showNotification('Channel deleted! 🗑️');
     };
@@ -205,12 +219,12 @@ const App: React.FC = () => {
     const selectedChannel = channels.find(c => c.id === selectedChannelId);
     const userChannels = channels.filter(c => c.userId === currentUser.id);
 
-    const handleUpdatePost = async (postId: number, content: string) => {
+    const handleUpdatePost = async (storyId: number, content: string) => {
         try {
-            const response = await api.updatePost(postId, content);
+            const response = await api.updateStory(storyId, content);
             if (response.success && response.data) {
-                setPosts(prev => prev.map(p => p.id === postId ? response.data! : p));
-                showNotification('Post updated successfully! ✏️');
+                setStories(prev => prev.map(p => p.id === storyId ? response.data! : p));
+                showNotification('Story updated successfully! ✏️');
             } else {
                 showNotification(response.error || 'Failed to update post');
             }
@@ -219,12 +233,12 @@ const App: React.FC = () => {
         }
     };
 
-    const handleDeletePost = async (postId: number) => {
+    const handleDeletePost = async (storyId: number) => {
         try {
-            const response = await api.deletePost(postId, currentUser.id);
+            const response = await api.deleteStory(storyId, currentUser.id);
             if (response.success) {
-                setPosts(prev => prev.filter(p => p.id !== postId));
-                showNotification('Post deleted successfully! 🗑️');
+                setStories(prev => prev.filter(p => p.id !== storyId));
+                showNotification('Story deleted successfully! 🗑️');
             } else {
                 showNotification(response.error || 'Failed to delete post');
             }
@@ -233,11 +247,11 @@ const App: React.FC = () => {
         }
     };
 
-    const handleLike = async (postId: number) => {
+    const handleLike = async (storyId: number) => {
         // Optimistic update
-        setPosts(prev =>
+        setStories(prev =>
             prev.map(post => {
-                if (post.id === postId) {
+                if (post.id === storyId) {
                     const isCurrentlyLiked = post.likedBy.includes(currentUser.id);
                     return {
                         ...post,
@@ -252,19 +266,19 @@ const App: React.FC = () => {
         );
 
         try {
-            await api.toggleLike(postId, currentUser.id);
+            await api.toggleLike(storyId, currentUser.id);
         } catch (error) {
             // Revert on error
-            loadPosts();
+            loadStories();
         }
     };
 
     const handleComment = async (parentId: number, content: string) => {
         try {
-            const parentPost = posts.find(p => p.id === parentId);
+            const parentPost = stories.find(p => p.id === parentId);
             if (!parentPost) return;
 
-            const response = await api.createPost(
+            const response = await api.createStory(
                 currentUser.id,
                 content,
                 undefined,
@@ -273,7 +287,7 @@ const App: React.FC = () => {
             );
 
             if (response.success && response.data) {
-                setPosts(prev => [{...response.data!, isNew: true}, ...prev]);
+                setStories(prev => [{...response.data!, isNew: true}, ...prev]);
                 showNotification(response.message || 'Comment posted! 💬');
             } else {
                 showNotification(response.error || 'Failed to post comment');
@@ -297,6 +311,27 @@ const App: React.FC = () => {
         }
     };
 
+    const handleThemeChange = async (theme: Theme) => {
+        // Update state immediately for UI responsiveness
+        setCurrentTheme(theme);
+
+        // Save to localStorage for fast loading on next visit
+        saveThemeToLocalStorage(theme.id);
+
+        // Save to user profile for backup/sync
+        try {
+            const response = await api.updateUserProfile(currentUser.id, { themeId: theme.id });
+            if (response.success && response.data) {
+                setCurrentUser(response.data);
+                showNotification('Theme updated! 🎨');
+            }
+        } catch (error) {
+            // Theme is still applied locally even if API fails
+            console.warn('Failed to save theme to user profile:', error);
+            showNotification('Theme applied locally');
+        }
+    };
+
     const handleViewProfile = (userId: number) => {
         setViewingUserId(userId);
         setViewingPostId(null); // Reset post view
@@ -305,21 +340,21 @@ const App: React.FC = () => {
         window.history.pushState({}, '', `/@${users[userId]?.username || userId}`);
     };
 
-    const handleViewPost = (postId: number) => {
-        setViewingPostId(postId);
+    const handleViewStory = (storyId: number) => {
+        setViewingPostId(storyId);
         setViewingUserId(null); // Reset profile view
         setActiveTab('home');
         // Update URL without navigation
-        window.history.pushState({}, '', `/story/${postId}`);
+        window.history.pushState({}, '', `/story/${storyId}`);
     };
 
     useEffect(() => {
-        const simulator = new ActivitySimulator(({action, postId, userId}) => {
+        const simulator = new ActivitySimulator(({action, storyId, userId}) => {
             if (userId === currentUser.id && action !== 'comment') return;
 
-            setPosts(prevPosts =>
-                prevPosts.map(post => {
-                    if (post.id === postId) {
+            setStories(prevStories =>
+                prevStories.map(post => {
+                    if (post.id === storyId) {
                         const updatedPost = {...post};
 
                         if (action === 'like') {
@@ -358,14 +393,14 @@ const App: React.FC = () => {
         setHydratedPostIds(new Set());
 
         try {
-            const payload = await server.fetchHydration(posts);
+            const payload = await server.fetchHydration(stories);
 
             const updatedIds = new Set(payload.updates.map(u => u.id));
-            const newIds = new Set(payload.newPosts.map(p => p.id));
+            const newIds = new Set(payload.newStories.map(p => p.id));
             setHydratedPostIds(new Set([...updatedIds, ...newIds]));
 
-            setPosts(prevPosts => {
-                let updatedPosts = prevPosts.map(post => {
+            setStories(prevStories => {
+                let updatedStories = prevStories.map(post => {
                     const update = payload.updates.find(u => u.id === post.id);
                     if (update) {
                         return {
@@ -379,11 +414,11 @@ const App: React.FC = () => {
                     return post;
                 });
 
-                if (payload.newPosts.length > 0) {
-                    updatedPosts = [...payload.newPosts, ...updatedPosts];
+                if (payload.newStories.length > 0) {
+                    updatedStories = [...payload.newStories, ...updatedStories];
                 }
 
-                return updatedPosts;
+                return updatedStories;
             });
 
             setLastHydration(new Date().toLocaleTimeString());
@@ -398,7 +433,7 @@ const App: React.FC = () => {
         } finally {
             setIsHydrating(false);
         }
-    }, [posts, server]);
+    }, [stories, server]);
 
     return (
         <div className="min-h-screen" style={{backgroundColor: currentTheme.background}}>
@@ -417,7 +452,7 @@ const App: React.FC = () => {
                                 <button
                                     onClick={() => {
                                         setActiveTab('home');
-                                        setViewingPostId(null); // Reset to show all posts
+                                        setViewingPostId(null); // Reset to show all stories
                                         setViewingUserId(null);
                                         window.history.pushState({}, '', '/');
                                     }}
@@ -492,7 +527,7 @@ const App: React.FC = () => {
             {showThemeSelector && (
                 <ThemeSelector
                     currentTheme={currentTheme}
-                    onThemeChange={setCurrentTheme}
+                    onThemeChange={handleThemeChange}
                     onClose={() => setShowThemeSelector(false)}
                 />
             )}
@@ -530,13 +565,13 @@ const App: React.FC = () => {
                                 user={viewingUserId ? users[viewingUserId] : currentUser}
                                 currentUser={currentUser}
                                 theme={currentTheme}
-                                posts={posts}
+                                stories={stories}
                                 onLike={handleLike}
                                 onDelete={handleDeletePost}
                                 onUpdate={handleUpdatePost}
                                 onComment={handleComment}
                                 onViewProfile={handleViewProfile}
-                                onViewPost={handleViewPost}
+                                onViewStory={handleViewStory}
                                 onUserUpdate={handleUserUpdate}
                                 hydratedPostIds={hydratedPostIds}
                             />
@@ -553,7 +588,7 @@ const App: React.FC = () => {
                             <>
                             {/* Single Post View */}
                             {(() => {
-                                const viewPost = posts.find(p => p.id === viewingPostId);
+                                const viewPost = stories.find(p => p.id === viewingPostId);
                                 if (!viewPost) {
                                     return (
                                         <div className="rounded-lg border p-12 text-center" style={{
@@ -568,7 +603,7 @@ const App: React.FC = () => {
                                 }
 
                                 // If this is a comment, show the parent post first
-                                const parentPost = viewPost.parentId ? posts.find(p => p.id === viewPost.parentId) : null;
+                                const parentPost = viewPost.parentId ? stories.find(p => p.id === viewPost.parentId) : null;
 
                                 return (
                                     <div className="space-y-6">
@@ -578,38 +613,38 @@ const App: React.FC = () => {
                                                     <MessageCircle className="w-4 h-4" />
                                                     <span>Replying to</span>
                                                 </div>
-                                                <PostComponent
+                                                <StoryComponent
                                                     key={parentPost.id}
-                                                    post={parentPost}
+                                                    story={parentPost}
                                                     user={users[parentPost.userId]}
                                                     onLike={handleLike}
                                                     onDelete={handleDeletePost}
                                                     onUpdate={handleUpdatePost}
                                                     onComment={handleComment}
                                                     onViewProfile={handleViewProfile}
-                                                    onViewPost={handleViewPost}
+                                                    onViewStory={handleViewStory}
                                                     currentUserId={currentUser.id}
                                                     isHydrated={hydratedPostIds.has(parentPost.id)}
                                                     theme={currentTheme}
-                                                    allPosts={posts}
+                                                    allStories={stories}
                                                     expandComments={false}
                                                 />
                                             </div>
                                         )}
-                                        <PostComponent
+                                        <StoryComponent
                                             key={viewPost.id}
-                                            post={viewPost}
+                                            story={viewPost}
                                             user={users[viewPost.userId]}
                                             onLike={handleLike}
                                             onDelete={handleDeletePost}
                                             onUpdate={handleUpdatePost}
                                             onComment={handleComment}
                                             onViewProfile={handleViewProfile}
-                                            onViewPost={handleViewPost}
+                                            onViewStory={handleViewStory}
                                             currentUserId={currentUser.id}
                                             isHydrated={hydratedPostIds.has(viewPost.id)}
                                             theme={currentTheme}
-                                            allPosts={posts}
+                                            allStories={stories}
                                             expandComments={true}
                                         />
                                     </div>
@@ -772,21 +807,21 @@ const App: React.FC = () => {
                                 </div>
                             </div>
 
-                            {posts.filter(p => !p.parentId).map(post => (
-                                <PostComponent
+                            {stories.filter(p => !p.parentId).map(post => (
+                                <StoryComponent
                                     key={post.id}
-                                    post={post}
+                                    story={post}
                                     user={users[post.userId]}
                                     onLike={handleLike}
                                     onDelete={handleDeletePost}
                                     onUpdate={handleUpdatePost}
                                     onComment={handleComment}
                                     onViewProfile={handleViewProfile}
-                                    onViewPost={handleViewPost}
+                                    onViewStory={handleViewStory}
                                     currentUserId={currentUser.id}
                                     isHydrated={hydratedPostIds.has(post.id)}
                                     theme={currentTheme}
-                                    allPosts={posts}
+                                    allStories={stories}
                                 />
                             ))}
                             </>

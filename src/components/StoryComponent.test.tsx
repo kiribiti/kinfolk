@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, userEvent } from '../test/utils';
-import { PostComponent } from './PostComponent';
-import { mockUser, mockPost, mockTheme } from '../test/utils';
+import { StoryComponent } from './StoryComponent';
+import { mockUser, mockStory, mockTheme } from '../test/utils';
 
-describe('PostComponent', () => {
+describe('StoryComponent', () => {
   const mockOnLike = vi.fn();
   const mockOnDelete = vi.fn();
   const mockOnUpdate = vi.fn();
@@ -12,56 +12,56 @@ describe('PostComponent', () => {
   const mockOnViewPost = vi.fn();
 
   const defaultProps = {
-    post: mockPost,
+    story: mockStory,
     user: mockUser,
     onLike: mockOnLike,
     onDelete: mockOnDelete,
     onUpdate: mockOnUpdate,
     onComment: mockOnComment,
     onViewProfile: mockOnViewProfile,
-    onViewPost: mockOnViewPost,
+    onViewStory: mockOnViewPost,
     currentUserId: 1,
     isHydrated: false,
     theme: mockTheme,
-    allPosts: [mockPost],
+    allStories: [mockStory],
   };
 
   it('should render post content', () => {
-    render(<PostComponent {...defaultProps} />);
+    render(<StoryComponent {...defaultProps} />);
 
-    expect(screen.getByText(mockPost.content)).toBeInTheDocument();
+    expect(screen.getByText(mockStory.content)).toBeInTheDocument();
   });
 
   it('should render user information', () => {
-    render(<PostComponent {...defaultProps} />);
+    render(<StoryComponent {...defaultProps} />);
 
     expect(screen.getByText(mockUser.name)).toBeInTheDocument();
     expect(screen.getByText(`@${mockUser.username}`)).toBeInTheDocument();
   });
 
   it('should render like and comment counts', () => {
-    render(<PostComponent {...defaultProps} />);
+    render(<StoryComponent {...defaultProps} />);
 
-    expect(screen.getByText(mockPost.likes.toString())).toBeInTheDocument();
+    expect(screen.getByText(mockStory.likes.toString())).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument(); // Comment count
   });
 
   it('should call onLike when like button is clicked', async () => {
     const user = userEvent.setup();
-    render(<PostComponent {...defaultProps} />);
+    render(<StoryComponent {...defaultProps} />);
 
     // Find button containing the like count
-    const likeButton = screen.getByText(mockPost.likes.toString()).closest('button');
+    const likeButton = screen.getByText(mockStory.likes.toString()).closest('button');
     expect(likeButton).toBeTruthy();
 
     await user.click(likeButton!);
 
-    expect(mockOnLike).toHaveBeenCalledWith(mockPost.id);
+    expect(mockOnLike).toHaveBeenCalledWith(mockStory.id);
   });
 
   it('should call onViewProfile when clicking user name', async () => {
     const user = userEvent.setup();
-    render(<PostComponent {...defaultProps} />);
+    render(<StoryComponent {...defaultProps} />);
 
     const nameButton = screen.getByText(mockUser.name);
     await user.click(nameButton);
@@ -71,7 +71,7 @@ describe('PostComponent', () => {
 
   it('should call onViewProfile when clicking username', async () => {
     const user = userEvent.setup();
-    render(<PostComponent {...defaultProps} />);
+    render(<StoryComponent {...defaultProps} />);
 
     const usernameButton = screen.getByText(`@${mockUser.username}`);
     await user.click(usernameButton);
@@ -80,14 +80,14 @@ describe('PostComponent', () => {
   });
 
   it('should show comment input when expandComments is true', () => {
-    render(<PostComponent {...defaultProps} expandComments={true} />);
+    render(<StoryComponent {...defaultProps} expandComments={true} />);
 
     expect(screen.getByPlaceholderText('Write a comment...')).toBeInTheDocument();
   });
 
   it('should call onComment when submitting a comment', async () => {
     const user = userEvent.setup();
-    render(<PostComponent {...defaultProps} expandComments={true} />);
+    render(<StoryComponent {...defaultProps} expandComments={true} />);
 
     // Type comment
     const input = screen.getByPlaceholderText('Write a comment...');
@@ -97,11 +97,11 @@ describe('PostComponent', () => {
     const postButton = screen.getByRole('button', { name: /post/i });
     await user.click(postButton);
 
-    expect(mockOnComment).toHaveBeenCalledWith(mockPost.id, 'Test comment');
+    expect(mockOnComment).toHaveBeenCalledWith(mockStory.id, 'Test comment');
   });
 
   it('should not call onComment when comment is empty', () => {
-    render(<PostComponent {...defaultProps} expandComments={true} />);
+    render(<StoryComponent {...defaultProps} expandComments={true} />);
 
     // Post button should be disabled when input is empty
     const postButton = screen.getByRole('button', { name: /post/i });
@@ -109,7 +109,7 @@ describe('PostComponent', () => {
   });
 
   it('should show edit menu for post owner', () => {
-    render(<PostComponent {...defaultProps} currentUserId={mockPost.userId} />);
+    render(<StoryComponent {...defaultProps} currentUserId={mockStory.userId} />);
 
     // For owner, there should be additional interactive buttons beyond the standard ones
     const buttons = screen.getAllByRole('button');
@@ -118,7 +118,7 @@ describe('PostComponent', () => {
   });
 
   it('should not show edit menu for non-owner', () => {
-    render(<PostComponent {...defaultProps} currentUserId={999} />);
+    render(<StoryComponent {...defaultProps} currentUserId={999} />);
 
     // For non-owner, should have fewer buttons (no menu button)
     const buttons = screen.getAllByRole('button');
@@ -128,23 +128,23 @@ describe('PostComponent', () => {
 
   it('should display hydrated styling', () => {
     const { container } = render(
-      <PostComponent {...defaultProps} isHydrated={true} />
+      <StoryComponent {...defaultProps} isHydrated={true} />
     );
 
-    const post = container.querySelector('.shadow-md');
-    expect(post).toBeInTheDocument();
+    const story = container.querySelector('.shadow-md');
+    expect(story).toBeInTheDocument();
   });
 
-  it('should render child posts (comments)', () => {
+  it('should render child stories (comments)', () => {
     const commentPost = {
-      ...mockPost,
+      ...mockStory,
       id: 2,
-      parentId: mockPost.id,
+      parentId: mockStory.id,
       content: 'This is a comment',
     };
 
     render(
-      <PostComponent {...defaultProps} allPosts={[mockPost, commentPost]} />
+      <StoryComponent {...defaultProps} allStories={[mockStory, commentPost]} />
     );
 
     // Should show 1 comment count
@@ -154,28 +154,28 @@ describe('PostComponent', () => {
     expect(commentButton?.textContent).toContain('1');
   });
 
-  it('should call onViewPost when clicking timestamp', async () => {
+  it('should call onViewStory when clicking timestamp', async () => {
     const user = userEvent.setup();
-    render(<PostComponent {...defaultProps} />);
+    render(<StoryComponent {...defaultProps} />);
 
-    const timestampButton = screen.getByText(mockPost.timestamp);
+    const timestampButton = screen.getByText(mockStory.timestamp);
     await user.click(timestampButton);
 
-    expect(mockOnViewPost).toHaveBeenCalledWith(mockPost.id);
+    expect(mockOnViewPost).toHaveBeenCalledWith(mockStory.id);
   });
 
   it('should expand comments by default when expandComments is true', () => {
     const commentPost = {
-      ...mockPost,
+      ...mockStory,
       id: 2,
-      parentId: mockPost.id,
+      parentId: mockStory.id,
       content: 'This is a comment',
     };
 
     render(
-      <PostComponent
+      <StoryComponent
         {...defaultProps}
-        allPosts={[mockPost, commentPost]}
+        allStories={[mockStory, commentPost]}
         expandComments={true}
       />
     );
@@ -186,16 +186,16 @@ describe('PostComponent', () => {
 
   it('should not expand comments by default when expandComments is false', () => {
     const commentPost = {
-      ...mockPost,
+      ...mockStory,
       id: 2,
-      parentId: mockPost.id,
+      parentId: mockStory.id,
       content: 'This is a comment',
     };
 
     render(
-      <PostComponent
+      <StoryComponent
         {...defaultProps}
-        allPosts={[mockPost, commentPost]}
+        allStories={[mockStory, commentPost]}
         expandComments={false}
       />
     );
@@ -206,34 +206,34 @@ describe('PostComponent', () => {
 
   it('should use false as default for expandComments when not specified', () => {
     const commentPost = {
-      ...mockPost,
+      ...mockStory,
       id: 2,
-      parentId: mockPost.id,
+      parentId: mockStory.id,
       content: 'This is a comment',
     };
 
     render(
-      <PostComponent {...defaultProps} allPosts={[mockPost, commentPost]} />
+      <StoryComponent {...defaultProps} allStories={[mockStory, commentPost]} />
     );
 
     // Comment input should not be visible (default is false)
     expect(screen.queryByPlaceholderText('Write a comment...')).not.toBeInTheDocument();
   });
 
-  it('should pass onViewPost to Comment components', async () => {
+  it('should pass onViewStory to Comment components', async () => {
     const user = userEvent.setup();
     const commentPost = {
-      ...mockPost,
+      ...mockStory,
       id: 2,
-      parentId: mockPost.id,
+      parentId: mockStory.id,
       content: 'This is a comment',
       timestamp: '3m ago',
     };
 
     render(
-      <PostComponent
+      <StoryComponent
         {...defaultProps}
-        allPosts={[mockPost, commentPost]}
+        allStories={[mockStory, commentPost]}
         expandComments={true}
       />
     );

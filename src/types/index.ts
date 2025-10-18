@@ -91,16 +91,16 @@ export const themes: Theme[] = [
 // TYPES & INTERFACES
 // ============================================
 
-export interface Post {
+export interface Story {
   id: number;
   userId: number;
   channelId: number;
-  parentId?: number; // If set, this post is a comment on another post
+  parentId?: number; // If set, this story is a comment on another story
   content: string;
   timestamp: string;
   createdAt?: Date;
   likes: number;
-  comments: number; // Calculated count of child posts
+  comments: number; // Calculated count of child stories (comments)
   likedBy: number[];
   previousLikes?: number;
   previousComments?: number;
@@ -125,7 +125,7 @@ export interface Channel {
   isPrimary: boolean;
   isPrivate: boolean;
   subscriberCount: number;
-  postCount: number;
+  storyCount: number;
   createdAt: Date;
 }
 
@@ -157,7 +157,7 @@ export interface User {
 
 export interface Activity {
   action: 'like' | 'unlike' | 'comment';
-  postId: number;
+  storyId: number;
   userId: number;
 }
 
@@ -169,13 +169,13 @@ export interface RecentActivity {
 
 export interface HydrationPayload {
   timestamp: number;
-  updates: PostUpdate[];
-  newPosts: Post[];
-  deletedPostIds: number[];
+  updates: StoryUpdate[];
+  newStories: Story[];
+  deletedStoryIds: number[];
   message: string;
 }
 
-export interface PostUpdate {
+export interface StoryUpdate {
   id: number;
   likes: number;
   comments: number;

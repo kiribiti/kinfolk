@@ -1,6 +1,6 @@
 import { render, RenderOptions } from '@testing-library/react';
 import { ReactElement } from 'react';
-import { Theme, themes, User, Post } from '../types';
+import { Theme, themes, User, Story } from '../types';
 import { mockUsers as mockUsersFromData } from '../data/mockData';
 
 // Mock theme
@@ -34,12 +34,12 @@ export const mockVerifiedUser: User = {
   subscriptions: 100,
 };
 
-// Mock posts
-export const mockPost: Post = {
+// Mock stories
+export const mockStory: Story = {
   id: 1,
   userId: 1,
   channelId: 1,
-  content: 'Test post content',
+  content: 'Test story content',
   timestamp: '5m ago',
   createdAt: new Date(Date.now() - 5 * 60 * 1000),
   likes: 10,
@@ -47,7 +47,7 @@ export const mockPost: Post = {
   likedBy: [],
 };
 
-export const mockPostWithComment: Post = {
+export const mockStoryWithComment: Story = {
   id: 2,
   userId: 1,
   channelId: 1,

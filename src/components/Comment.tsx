@@ -1,30 +1,30 @@
 import React, { useState } from 'react';
-import { Post, Theme, User } from '../types';
+import { Story, Theme, User } from '../types';
 import { mockUsers } from '../data/mockData';
 import { Avatar } from './Avatar';
 
 interface CommentProps {
-  comment: Post;
-  allPosts: Post[];
+  comment: Story;
+  allStories: Story[];
   theme: Theme;
   onComment: (parentId: number, content: string) => void;
   onViewProfile?: (userId: number) => void;
-  onViewPost?: (postId: number) => void;
+  onViewStory?: (storyId: number) => void;
 }
 
 export const Comment: React.FC<CommentProps> = ({
   comment,
-  allPosts,
+  allStories,
   theme,
   onComment,
   onViewProfile,
-  onViewPost,
+  onViewStory,
 }) => {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyContent, setReplyContent] = useState('');
 
   const commentUser = mockUsers.find(u => u.id === comment.userId) || mockUsers[0];
-  const replies = allPosts.filter(p => p.parentId === comment.id);
+  const replies = allStories.filter(s => s.parentId === comment.id);
 
   const handleReply = () => {
     if (replyContent.trim()) {
@@ -60,7 +60,7 @@ export const Comment: React.FC<CommentProps> = ({
             </button>
             <span className="text-gray-400 text-xs">·</span>
             <button
-              onClick={() => onViewPost?.(comment.id)}
+              onClick={() => onViewStory?.(comment.id)}
               className="text-gray-400 text-xs hover:underline"
             >
               {comment.timestamp}
@@ -136,7 +136,7 @@ export const Comment: React.FC<CommentProps> = ({
                         </button>
                         <span className="text-gray-400 text-xs">·</span>
                         <button
-                          onClick={() => onViewPost?.(reply.id)}
+                          onClick={() => onViewStory?.(reply.id)}
                           className="text-gray-400 text-xs hover:underline"
                         >
                           {reply.timestamp}

@@ -1,5 +1,5 @@
-import { Post, User, MediaFile, Subscription } from '../types';
-import { postsDB, channelsDB, subscriptionsDB, mockUsers, formatTimestamp } from '../data/mockData';
+import { Story, User, MediaFile, Subscription } from '../types';
+import { storiesDB, channelsDB, subscriptionsDB, mockUsers, formatTimestamp } from '../data/mockData';
 
 const simulateDelay = (min = 300, max = 800): Promise<void> => {
   return new Promise(resolve =>
@@ -8,39 +8,39 @@ const simulateDelay = (min = 300, max = 800): Promise<void> => {
 };
 
 export const ApiService = {
-  async getPosts() {
+  async getStories() {
     await simulateDelay();
     return {
       success: true,
-      data: postsDB.map(post => ({
-        ...post,
-        timestamp: formatTimestamp(post.createdAt || new Date()),
+      data: storiesDB.map(story => ({
+        ...story,
+        timestamp: formatTimestamp(story.createdAt || new Date()),
       })),
     };
   },
 
-  async createPost(userId: number, content: string, media?: MediaFile[], channelId?: number, parentId?: number) {
+  async createStory(userId: number, content: string, media?: MediaFile[], channelId?: number, parentId?: number) {
     await simulateDelay(400, 1000);
 
     if (!content || content.trim().length === 0) {
-      return { success: false, error: 'Post content cannot be empty' };
+      return { success: false, error: 'Story content cannot be empty' };
     }
     if (content.length > 500) {
-      return { success: false, error: 'Post content must be 500 characters or less' };
+      return { success: false, error: 'Story content must be 500 characters or less' };
     }
     if (!channelId) {
       return { success: false, error: 'Channel ID is required' };
     }
 
-    // If parentId is provided, verify the parent post exists
+    // If parentId is provided, verify the parent story exists
     if (parentId) {
-      const parentPost = postsDB.find(p => p.id === parentId);
-      if (!parentPost) {
-        return { success: false, error: 'Parent post not found' };
+      const parentStory = storiesDB.find(p => p.id === parentId);
+      if (!parentStory) {
+        return { success: false, error: 'Parent story not found' };
       }
     }
 
-    const newPost: Post = {
+    const newStory: Story = {
       id: Date.now(),
       userId,
       channelId,
@@ -54,77 +54,77 @@ export const ApiService = {
       media: media || [],
     };
 
-    postsDB.unshift(newPost);
-    return { success: true, data: newPost, message: parentId ? 'Comment created successfully' : 'Post created successfully' };
+    storiesDB.unshift(newStory);
+    return { success: true, data: newStory, message: parentId ? 'Comment created successfully' : 'Story created successfully' };
   },
 
-  async updatePost(postId: number, content: string) {
+  async updateStory(storyId: number, content: string) {
     await simulateDelay(400, 800);
 
-    const postIndex = postsDB.findIndex(p => p.id === postId);
-    if (postIndex === -1) {
-      return { success: false, error: 'Post not found' };
+    const storyIndex = storiesDB.findIndex(p => p.id === storyId);
+    if (storyIndex === -1) {
+      return { success: false, error: 'Story not found' };
     }
 
     if (content.length > 500) {
-      return { success: false, error: 'Post content must be 500 characters or less' };
+      return { success: false, error: 'Story content must be 500 characters or less' };
     }
 
-    postsDB[postIndex] = {
-      ...postsDB[postIndex],
+    storiesDB[storyIndex] = {
+      ...storiesDB[storyIndex],
       content: content.trim(),
     };
 
     return {
       success: true,
       data: {
-        ...postsDB[postIndex],
-        timestamp: formatTimestamp(postsDB[postIndex].createdAt || new Date()),
+        ...storiesDB[storyIndex],
+        timestamp: formatTimestamp(storiesDB[storyIndex].createdAt || new Date()),
       },
-      message: 'Post updated successfully',
+      message: 'Story updated successfully',
     };
   },
 
-  async deletePost(postId: number, userId: number) {
+  async deleteStory(storyId: number, userId: number) {
     await simulateDelay(300, 600);
 
-    const postIndex = postsDB.findIndex(p => p.id === postId);
-    if (postIndex === -1) {
-      return { success: false, error: 'Post not found' };
+    const storyIndex = storiesDB.findIndex(p => p.id === storyId);
+    if (storyIndex === -1) {
+      return { success: false, error: 'Story not found' };
     }
 
-    if (postsDB[postIndex].userId !== userId) {
-      return { success: false, error: 'Unauthorized: You can only delete your own posts' };
+    if (storiesDB[storyIndex].userId !== userId) {
+      return { success: false, error: 'Unauthorized: You can only delete your own stories' };
     }
 
-    postsDB.splice(postIndex, 1);
-    return { success: true, message: 'Post deleted successfully' };
+    storiesDB.splice(storyIndex, 1);
+    return { success: true, message: 'Story deleted successfully' };
   },
 
-  async toggleLike(postId: number, userId: number) {
+  async toggleLike(storyId: number, userId: number) {
     await simulateDelay(200, 400);
 
-    const postIndex = postsDB.findIndex(p => p.id === postId);
-    if (postIndex === -1) {
-      return { success: false, error: 'Post not found' };
+    const storyIndex = storiesDB.findIndex(p => p.id === storyId);
+    if (storyIndex === -1) {
+      return { success: false, error: 'Story not found' };
     }
 
-    const post = postsDB[postIndex];
-    const isLiked = post.likedBy.includes(userId);
+    const story = storiesDB[storyIndex];
+    const isLiked = story.likedBy.includes(userId);
 
-    postsDB[postIndex] = {
-      ...post,
-      likes: isLiked ? post.likes - 1 : post.likes + 1,
+    storiesDB[storyIndex] = {
+      ...story,
+      likes: isLiked ? story.likes - 1 : story.likes + 1,
       likedBy: isLiked
-        ? post.likedBy.filter(id => id !== userId)
-        : [...post.likedBy, userId],
+        ? story.likedBy.filter(id => id !== userId)
+        : [...story.likedBy, userId],
     };
 
     return {
       success: true,
       data: {
-        ...postsDB[postIndex],
-        timestamp: formatTimestamp(postsDB[postIndex].createdAt || new Date()),
+        ...storiesDB[storyIndex],
+        timestamp: formatTimestamp(storiesDB[storyIndex].createdAt || new Date()),
       },
       liked: !isLiked,
     };

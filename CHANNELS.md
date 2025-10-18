@@ -2,7 +2,7 @@
 
 ## Overview
 
-Kinfolk uses a channel-based content distribution system where users can organize their posts into distinct channels. Each user gets one primary channel automatically, with the ability to create up to two additional channels (3 total).
+Kinfolk uses a channel-based content distribution system where users can organize their stories into distinct channels. Each user gets one primary channel automatically, with the ability to create up to two additional channels (3 total).
 
 **Multi-Platform Architecture**: Kinfolk operates as a multi-platform system where channels are scoped to specific platforms. Each channel belongs to both a user and a platform, enabling isolated communities and content spaces within the broader kinfolk ecosystem.
 
@@ -16,7 +16,7 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 
 -   **Auto-Creation**: Every user automatically receives a primary channel upon registration
 -   **Naming**: Primary channel is named after the user (e.g., "Sarah Chen")
--   **Default Posting**: All posts go to the primary channel by default
+-   **Default Storying**: All stories go to the primary channel by default
 -   **Cannot Be Deleted**: Primary channel is permanent (but can be made private)
 
 #### Additional Channels
@@ -25,7 +25,7 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 -   **Custom Naming**: Users choose their own channel names (e.g., "Archive Stories", "Family History")
 -   **Description**: Each channel can have a description explaining its purpose
 -   **Deletion**: Additional channels can be deleted by the owner
--   **Reordering**: Users can set which channel is their default for posting
+-   **Reordering**: Users can set which channel is their default for storying
 
 #### Channel Properties
 
@@ -54,11 +54,11 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 ### Private Channels
 
 -   **Restricted Access**: Only approved subscribers can view channel content
--   **Hidden Content**: Posts in private channels are not visible to non-subscribers
+-   **Hidden Content**: Stories in private channels are not visible to non-subscribers
 -   **Opt-In**: Channel owners can make any channel (including primary) private
 -   **Discovery**: Private channels show as "Private Channel" with a lock icon
     -   Channel name and description are visible
-    -   Post content and count are hidden from non-subscribers
+    -   Story content and count are hidden from non-subscribers
 
 ---
 
@@ -98,20 +98,20 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 
 ---
 
-## 4. Posting to Channels
+## 4. Storying to Channels
 
 ### Channel Selection
 
--   **Default Channel**: Posts default to user's designated default channel
+-   **Default Channel**: Stories default to user's designated default channel
 -   **Channel Picker**: Dropdown/selector in compose box to choose channel
--   **Single Channel**: Each post belongs to exactly one channel (no cross-posting)
--   **Cannot Change**: Once posted, the channel cannot be changed (post must be deleted and recreated)
+-   **Single Channel**: Each story belongs to exactly one channel (no cross-storying)
+-   **Cannot Change**: Once storyed, the channel cannot be changed (story must be deleted and recreated)
 
 ### Visibility Rules
 
--   **Public Channel Posts**: Visible to all subscribers and discoverable
--   **Private Channel Posts**: Only visible to approved subscribers
--   **Feed Aggregation**: User's home feed shows posts from all their subscribed channels
+-   **Public Channel Stories**: Visible to all subscribers and discoverable
+-   **Private Channel Stories**: Only visible to approved subscribers
+-   **Feed Aggregation**: User's home feed shows stories from all their subscribed channels
 
 ---
 
@@ -126,9 +126,9 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 
 ### Channel Previews
 
--   **Public Channels**: Show recent posts, subscriber count, description
+-   **Public Channels**: Show recent stories, subscriber count, description
 -   **Private Channels**: Show channel name, description, subscriber count (if public), lock icon
-    -   No post previews or content visible
+    -   No story previews or content visible
 
 ---
 
@@ -137,18 +137,18 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 ### Owner Capabilities
 
 -   **Edit Channel**: Change name, description, privacy setting
--   **View Analytics**: See subscriber count, post count, engagement metrics
+-   **View Analytics**: See subscriber count, story count, engagement metrics
 -   **Manage Subscribers**: View, approve, deny, or remove subscribers (private channels)
 -   **Manage Invites**: Send, view, and cancel pending invitations
 -   **Delete Channel**: Remove additional channels (not primary)
--   **Set Default**: Choose which channel is default for posting
+-   **Set Default**: Choose which channel is default for storying
 
 ### Subscriber Capabilities
 
 -   **Subscribe/Unsubscribe**: Manage channel subscriptions
 -   **Request Access**: Request to subscribe to private channels
 -   **Notification Preferences**: Customize notifications per channel
--   **View Channel**: See channel description, posts, and activity
+-   **View Channel**: See channel description, stories, and activity
 
 ---
 
@@ -166,7 +166,7 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 -   Invitation to subscribe to private channel
 -   Subscription request approved
 -   Subscription request denied
--   New post in subscribed channel (configurable per channel)
+-   New story in subscribed channel (configurable per channel)
 
 ---
 
@@ -184,7 +184,7 @@ Kinfolk uses a channel-based content distribution system where users can organiz
     isPrimary: boolean;
     isPrivate: boolean;
     subscriberCount: number;
-    postCount: number;
+    storyCount: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -220,14 +220,14 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 }
 ```
 
-### Post Table (Updated)
+### Story Table (Updated)
 
 ```typescript
 {
   id: string
-  platformId: string  // platform this post belongs to
+  platformId: string  // platform this story belongs to
   userId: string
-  channelId: string  // required - every post belongs to a channel
+  channelId: string  // required - every story belongs to a channel
   content: string
   media: MediaFile[]
   likes: number
@@ -246,8 +246,8 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 -   ✅ Users can have channels across multiple platforms
 -   ✅ Channel names must be unique per user per platform (not globally unique)
 -   ✅ Subscriptions are platform-scoped (subscribe to a channel within a platform)
--   ✅ Posts are platform-scoped (posts belong to a channel on a specific platform)
--   ✅ Users cannot cross-post between platforms
+-   ✅ Stories are platform-scoped (stories belong to a channel on a specific platform)
+-   ✅ Users cannot cross-story between platforms
 
 ### Channel Limits
 
@@ -270,15 +270,15 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 
 -   ✅ Any channel can be made private (including primary)
 -   ✅ Making a channel private does not remove existing subscribers
--   ✅ Private channel posts are only visible to approved subscribers
+-   ✅ Private channel stories are only visible to approved subscribers
 -   ✅ Channel owners always see their own private channel content
 
-### Posting Rules
+### Storying Rules
 
--   ✅ Every post must belong to exactly one channel
--   ✅ Posts cannot be moved between channels
--   ✅ Users can only post to channels they own
--   ✅ Private channel posts are not visible in public feeds
+-   ✅ Every story must belong to exactly one channel
+-   ✅ Stories cannot be moved between channels
+-   ✅ Users can only story to channels they own
+-   ✅ Private channel stories are not visible in public feeds
 
 ---
 
@@ -288,7 +288,7 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 
 1. User registers account or joins a platform
 2. Primary channel auto-created with user's name (scoped to that platform)
-3. User posts to primary channel by default (within that platform)
+3. User stories to primary channel by default (within that platform)
 4. (Optional) User creates additional channels for specific topics (within that platform)
 5. (Optional) User makes channels private and manages access
 6. (Optional) User joins additional platforms and gets new primary channels on each
@@ -298,7 +298,7 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 1. User discovers channel (search, profile, recommendations)
 2. User clicks "Subscribe" button
 3. Subscription is instant
-4. User sees posts from channel in their feed
+4. User sees stories from channel in their feed
 
 ### Subscribing to Private Channel Flow
 
@@ -308,7 +308,7 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 4. Channel owner receives notification
 5. Channel owner approves or denies request
 6. User receives notification of decision
-7. If approved, user sees channel posts in their feed
+7. If approved, user sees channel stories in their feed
 
 ### Channel Invitation Flow
 
@@ -326,7 +326,7 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 
 ### Multi-Platform System
 
--   **Platform Isolation**: Channels, posts, and subscriptions are scoped to specific platforms
+-   **Platform Isolation**: Channels, stories, and subscriptions are scoped to specific platforms
 -   **User Portability**: A single user account can participate in multiple platforms
 -   **Primary Channel per Platform**: Users automatically receive a primary channel when joining each platform
 -   **Independent Channel Limits**: The 3-channel limit applies per platform (user could have 3 channels on Platform A and 3 on Platform B)
@@ -336,9 +336,9 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 ### Platform ID Usage
 
 -   Every channel has a `platformId` foreign key
--   Every post has a `platformId` foreign key (inherited from its channel)
+-   Every story has a `platformId` foreign key (inherited from its channel)
 -   Subscriptions reference channels, which are already platform-scoped
--   Feeds aggregate posts from channels within the current platform context
+-   Feeds aggregate stories from channels within the current platform context
 -   Search and discovery are filtered by current platform
 
 ### Implementation Considerations
@@ -353,15 +353,15 @@ Kinfolk uses a channel-based content distribution system where users can organiz
 
 ### Potential Enhancements
 
--   **Channel Analytics**: Detailed insights on subscriber growth, engagement, popular posts
--   **Scheduled Posts**: Post to channels at specific times
+-   **Channel Analytics**: Detailed insights on subscriber growth, engagement, popular stories
+-   **Scheduled Stories**: Story to channels at specific times
 -   **Channel Themes**: Custom colors/styling per channel
 -   **Channel Collaboration**: Multiple owners/moderators per channel
 -   **Channel Categories/Tags**: Organize channels by topic
--   **Featured Posts**: Pin important posts to top of channel
--   **Channel Archives**: Download all posts from a channel
+-   **Featured Stories**: Pin important stories to top of channel
+-   **Channel Archives**: Download all stories from a channel
 -   **Subscriber Tiers**: Different access levels within private channels
--   **Cross-Posting**: Allow posts to appear in multiple owned channels
+-   **Cross-Storying**: Allow stories to appear in multiple owned channels
 -   **Channel Templates**: Quick-start templates for common channel types
 
 ---

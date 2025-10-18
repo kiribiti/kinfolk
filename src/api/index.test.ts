@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ApiService } from './index';
-import { postsDB } from '../data/mockData';
+import { storiesDB } from '../data/mockData';
 
 describe('ApiService', () => {
   beforeEach(() => {
-    // Reset posts database before each test
-    postsDB.length = 0;
+    // Reset stories database before each test
+    storiesDB.length = 0;
   });
 
-  describe('createPost', () => {
-    it('should create a post successfully', async () => {
-      const response = await ApiService.createPost(
+  describe('createStory', () => {
+    it('should create a story successfully', async () => {
+      const response = await ApiService.createStory(
         1,
         'Test post content',
         undefined,
@@ -25,22 +25,22 @@ describe('ApiService', () => {
     });
 
     it('should fail when content is empty', async () => {
-      const response = await ApiService.createPost(1, '', undefined, 1);
+      const response = await ApiService.createStory(1, '', undefined, 1);
 
       expect(response.success).toBe(false);
-      expect(response.error).toBe('Post content cannot be empty');
+      expect(response.error).toBe('Story content cannot be empty');
     });
 
     it('should fail when content exceeds 500 characters', async () => {
       const longContent = 'a'.repeat(501);
-      const response = await ApiService.createPost(1, longContent, undefined, 1);
+      const response = await ApiService.createStory(1, longContent, undefined, 1);
 
       expect(response.success).toBe(false);
-      expect(response.error).toBe('Post content must be 500 characters or less');
+      expect(response.error).toBe('Story content must be 500 characters or less');
     });
 
     it('should fail when channel ID is not provided', async () => {
-      const response = await ApiService.createPost(
+      const response = await ApiService.createStory(
         1,
         'Test content',
         undefined,
@@ -53,7 +53,7 @@ describe('ApiService', () => {
 
     it('should create a comment with valid parentId', async () => {
       // First create a parent post
-      const parentResponse = await ApiService.createPost(
+      const parentResponse = await ApiService.createStory(
         1,
         'Parent post',
         undefined,
@@ -61,7 +61,7 @@ describe('ApiService', () => {
       );
 
       // Then create a comment
-      const commentResponse = await ApiService.createPost(
+      const commentResponse = await ApiService.createStory(
         2,
         'Comment content',
         undefined,
@@ -75,7 +75,7 @@ describe('ApiService', () => {
     });
 
     it('should fail when creating comment with invalid parentId', async () => {
-      const response = await ApiService.createPost(
+      const response = await ApiService.createStory(
         1,
         'Comment content',
         undefined,
@@ -84,14 +84,14 @@ describe('ApiService', () => {
       );
 
       expect(response.success).toBe(false);
-      expect(response.error).toBe('Parent post not found');
+      expect(response.error).toBe('Parent story not found');
     });
   });
 
-  describe('updatePost', () => {
-    it('should update a post successfully', async () => {
-      // Create a post first
-      const createResponse = await ApiService.createPost(
+  describe('updateStory', () => {
+    it('should update a story successfully', async () => {
+      // Create a story first
+      const createResponse = await ApiService.createStory(
         1,
         'Original content',
         undefined,
@@ -99,25 +99,25 @@ describe('ApiService', () => {
       );
 
       // Update it
-      const updateResponse = await ApiService.updatePost(
+      const updateResponse = await ApiService.updateStory(
         createResponse.data!.id,
         'Updated content'
       );
 
       expect(updateResponse.success).toBe(true);
       expect(updateResponse.data?.content).toBe('Updated content');
-      expect(updateResponse.message).toBe('Post updated successfully');
+      expect(updateResponse.message).toBe('Story updated successfully');
     });
 
     it('should fail when updating non-existent post', async () => {
-      const response = await ApiService.updatePost(9999, 'New content');
+      const response = await ApiService.updateStory(9999, 'New content');
 
       expect(response.success).toBe(false);
-      expect(response.error).toBe('Post not found');
+      expect(response.error).toBe('Story not found');
     });
 
     it('should fail when updated content exceeds 500 characters', async () => {
-      const createResponse = await ApiService.createPost(
+      const createResponse = await ApiService.createStory(
         1,
         'Original',
         undefined,
@@ -125,20 +125,20 @@ describe('ApiService', () => {
       );
 
       const longContent = 'a'.repeat(501);
-      const updateResponse = await ApiService.updatePost(
+      const updateResponse = await ApiService.updateStory(
         createResponse.data!.id,
         longContent
       );
 
       expect(updateResponse.success).toBe(false);
-      expect(updateResponse.error).toBe('Post content must be 500 characters or less');
+      expect(updateResponse.error).toBe('Story content must be 500 characters or less');
     });
   });
 
-  describe('deletePost', () => {
-    it('should delete a post successfully', async () => {
-      // Create a post first
-      const createResponse = await ApiService.createPost(
+  describe('deleteStory', () => {
+    it('should delete a story successfully', async () => {
+      // Create a story first
+      const createResponse = await ApiService.createStory(
         1,
         'To be deleted',
         undefined,
@@ -146,43 +146,43 @@ describe('ApiService', () => {
       );
 
       // Delete it
-      const deleteResponse = await ApiService.deletePost(
+      const deleteResponse = await ApiService.deleteStory(
         createResponse.data!.id,
         1
       );
 
       expect(deleteResponse.success).toBe(true);
-      expect(deleteResponse.message).toBe('Post deleted successfully');
+      expect(deleteResponse.message).toBe('Story deleted successfully');
     });
 
     it('should fail when deleting non-existent post', async () => {
-      const response = await ApiService.deletePost(9999, 1);
+      const response = await ApiService.deleteStory(9999, 1);
 
       expect(response.success).toBe(false);
-      expect(response.error).toBe('Post not found');
+      expect(response.error).toBe('Story not found');
     });
 
     it('should fail when user tries to delete another user\'s post', async () => {
-      const createResponse = await ApiService.createPost(
+      const createResponse = await ApiService.createStory(
         1,
         'User 1 post',
         undefined,
         1
       );
 
-      const deleteResponse = await ApiService.deletePost(
+      const deleteResponse = await ApiService.deleteStory(
         createResponse.data!.id,
         2 // Different user
       );
 
       expect(deleteResponse.success).toBe(false);
-      expect(deleteResponse.error).toBe('Unauthorized: You can only delete your own posts');
+      expect(deleteResponse.error).toBe('Unauthorized: You can only delete your own stories');
     });
   });
 
   describe('toggleLike', () => {
-    it('should like a post', async () => {
-      const createResponse = await ApiService.createPost(
+    it('should like a story', async () => {
+      const createResponse = await ApiService.createStory(
         1,
         'Test post',
         undefined,
@@ -200,8 +200,8 @@ describe('ApiService', () => {
       expect(likeResponse.data?.likedBy).toContain(2);
     });
 
-    it('should unlike a post', async () => {
-      const createResponse = await ApiService.createPost(
+    it('should unlike a story', async () => {
+      const createResponse = await ApiService.createStory(
         1,
         'Test post',
         undefined,
@@ -227,7 +227,7 @@ describe('ApiService', () => {
       const response = await ApiService.toggleLike(9999, 1);
 
       expect(response.success).toBe(false);
-      expect(response.error).toBe('Post not found');
+      expect(response.error).toBe('Story not found');
     });
   });
 

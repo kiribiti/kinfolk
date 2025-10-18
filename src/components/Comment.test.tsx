@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, userEvent } from '../test/utils';
 import { Comment } from './Comment';
-import { mockUser, mockPost, mockTheme, mockUsers } from '../test/utils';
+import { mockUser, mockStory, mockTheme, mockUsers } from '../test/utils';
 
 describe('Comment', () => {
   const mockOnComment = vi.fn();
@@ -9,7 +9,7 @@ describe('Comment', () => {
   const mockOnViewPost = vi.fn();
 
   const baseComment = {
-    ...mockPost,
+    ...mockStory,
     id: 10,
     parentId: 1,
     content: 'This is a test comment',
@@ -17,11 +17,11 @@ describe('Comment', () => {
 
   const defaultProps = {
     comment: baseComment,
-    allPosts: [baseComment],
+    allStories: [baseComment],
     theme: mockTheme,
     onComment: mockOnComment,
     onViewProfile: mockOnViewProfile,
-    onViewPost: mockOnViewPost,
+    onViewStory: mockOnViewPost,
   };
 
   beforeEach(() => {
@@ -68,7 +68,7 @@ describe('Comment', () => {
     expect(mockOnViewProfile).toHaveBeenCalledWith(commentUser.id);
   });
 
-  it('should call onViewPost when clicking timestamp', async () => {
+  it('should call onViewStory when clicking timestamp', async () => {
     const user = userEvent.setup();
     render(<Comment {...defaultProps} />);
 
@@ -149,7 +149,7 @@ describe('Comment', () => {
 
   it('should display nested replies', () => {
     const reply1 = {
-      ...mockPost,
+      ...mockStory,
       id: 11,
       parentId: baseComment.id,
       content: 'First nested reply',
@@ -157,14 +157,14 @@ describe('Comment', () => {
     };
 
     const reply2 = {
-      ...mockPost,
+      ...mockStory,
       id: 12,
       parentId: baseComment.id,
       content: 'Second nested reply',
       userId: 3,
     };
 
-    render(<Comment {...defaultProps} allPosts={[baseComment, reply1, reply2]} />);
+    render(<Comment {...defaultProps} allStories={[baseComment, reply1, reply2]} />);
 
     expect(screen.getByText('First nested reply')).toBeInTheDocument();
     expect(screen.getByText('Second nested reply')).toBeInTheDocument();
@@ -172,35 +172,35 @@ describe('Comment', () => {
 
   it('should show reply count when there are nested replies', () => {
     const reply1 = {
-      ...mockPost,
+      ...mockStory,
       id: 11,
       parentId: baseComment.id,
       content: 'First nested reply',
     };
 
     const reply2 = {
-      ...mockPost,
+      ...mockStory,
       id: 12,
       parentId: baseComment.id,
       content: 'Second nested reply',
     };
 
-    render(<Comment {...defaultProps} allPosts={[baseComment, reply1, reply2]} />);
+    render(<Comment {...defaultProps} allStories={[baseComment, reply1, reply2]} />);
 
     expect(screen.getByText(/reply \(2\)/i)).toBeInTheDocument();
   });
 
-  it('should call onViewPost for nested reply timestamps', async () => {
+  it('should call onViewStory for nested reply timestamps', async () => {
     const user = userEvent.setup();
     const reply1 = {
-      ...mockPost,
+      ...mockStory,
       id: 11,
       parentId: baseComment.id,
       content: 'Nested reply',
       timestamp: '3m ago',
     };
 
-    render(<Comment {...defaultProps} allPosts={[baseComment, reply1]} />);
+    render(<Comment {...defaultProps} allStories={[baseComment, reply1]} />);
 
     const nestedTimestamp = screen.getByText('3m ago');
     await user.click(nestedTimestamp);

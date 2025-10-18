@@ -79,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, lastHydration, on
               <span className="font-medium hover:underline cursor-pointer transition-colors" style={{ color: theme.primary }}>
                 {tag}
               </span>
-              <span className="text-gray-400 text-sm">2.4k posts</span>
+              <span className="text-gray-400 text-sm">2.4k stories</span>
             </div>
           ))}
         </div>

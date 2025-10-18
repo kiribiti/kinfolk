@@ -68,7 +68,7 @@ export const ChannelManager: React.FC<ChannelManagerProps> = ({
       isPrimary: false,
       isPrivate: formData.isPrivate,
       subscriberCount: 0,
-      postCount: 0,
+      storyCount: 0,
       createdAt: new Date()
     };
 
@@ -103,7 +103,7 @@ export const ChannelManager: React.FC<ChannelManagerProps> = ({
 
   const handleDelete = (channel: Channel) => {
     if (channel.isPrimary) return;
-    if (window.confirm(`Delete "${channel.name}"? This will also delete all posts in this channel.`)) {
+    if (window.confirm(`Delete "${channel.name}"? This will also delete all stories in this channel.`)) {
       onChannelDeleted(channel.id);
     }
   };
@@ -161,7 +161,7 @@ export const ChannelManager: React.FC<ChannelManagerProps> = ({
                       <p className="text-sm text-gray-500 mb-2">{channel.description}</p>
                     )}
                     <div className="flex gap-4 text-xs text-gray-500 mb-3">
-                      <span>{channel.postCount} posts</span>
+                      <span>{channel.storyCount} stories</span>
                       <span>{channel.subscriberCount} subscribers</span>
                     </div>
                     <button

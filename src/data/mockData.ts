@@ -1,4 +1,4 @@
-import { User, Channel, Subscription, Post, Activity, HydrationPayload, PostUpdate } from '../types';
+import { User, Channel, Subscription, Story, Activity, HydrationPayload, StoryUpdate } from '../types';
 
 // ============================================
 // MOCK DATA
@@ -10,8 +10,11 @@ export let channelsDB: Channel[] = [];
 export let nextChannelId = 1;
 export let subscriptionsDB: Subscription[] = [];
 export let nextSubscriptionId = 1;
-export let postsDB: Post[] = [];
-export let nextPostId = 1;
+export let storiesDB: Story[] = [];
+export let nextStoryId = 1;
+
+// Track if database has been initialized to prevent duplicate initialization
+let isInitialized = false;
 
 export const mockUsers: User[] = [
   {
@@ -26,6 +29,7 @@ export const mockUsers: User[] = [
     joinedDate: 'January 2023',
     subscribers: 1234,
     subscriptions: 567
+    // No themeId - will use default Kinfolk Heritage
   },
   {
     id: 2,
@@ -36,7 +40,8 @@ export const mockUsers: User[] = [
     bio: 'Designer & creative technologist',
     location: 'Brooklyn, NY',
     subscribers: 892,
-    subscriptions: 345
+    subscriptions: 345,
+    themeId: 'ocean' // Alex prefers Ocean Blue theme
   },
   {
     id: 3,
@@ -47,7 +52,8 @@ export const mockUsers: User[] = [
     bio: 'Research scientist exploring AI ethics',
     location: 'London, UK',
     subscribers: 2341,
-    subscriptions: 234
+    subscriptions: 234,
+    themeId: 'forest' // Maya prefers Forest Green theme
   },
   {
     id: 4,
@@ -57,7 +63,8 @@ export const mockUsers: User[] = [
     verified: false,
     bio: 'Product manager at tech startup',
     subscribers: 456,
-    subscriptions: 789
+    subscriptions: 789,
+    themeId: 'sunset' // Jordan prefers Sunset Orange theme
   },
   {
     id: 5,
@@ -69,7 +76,8 @@ export const mockUsers: User[] = [
     location: 'Houston, TX',
     website: 'samtaylor.space',
     subscribers: 3456,
-    subscriptions: 123
+    subscriptions: 123,
+    themeId: 'midnight' // Sam prefers Midnight theme
   },
 ];
 
@@ -93,9 +101,19 @@ export const formatTimestamp = (date: Date): string => {
 
 // Initialize with sample data
 export const initializeDB = () => {
+  // Only initialize once to prevent React Strict Mode from creating duplicates
+  if (isInitialized) {
+    return;
+  }
+
+  // Clear existing data
+  channelsDB.length = 0;
+  storiesDB.length = 0;
+  subscriptionsDB.length = 0;
+
   // Reset counters
   nextChannelId = 1;
-  nextPostId = 1;
+  nextStoryId = 1;
   nextSubscriptionId = 1;
 
   // Initialize channels for each user
@@ -109,7 +127,7 @@ export const initializeDB = () => {
       isPrimary: true,
       isPrivate: false,
       subscriberCount: user.subscribers || 0,
-      postCount: 0,
+      storyCount: 0,
       createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
     };
     channelsDB.push(primaryChannel);
@@ -126,7 +144,7 @@ export const initializeDB = () => {
     isPrimary: false,
     isPrivate: false,
     subscriberCount: 234,
-    postCount: 0,
+    storyCount: 0,
     createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
   };
   channelsDB.push(sarahArchiveChannel);
@@ -140,12 +158,12 @@ export const initializeDB = () => {
     isPrimary: false,
     isPrivate: true,
     subscriberCount: 89,
-    postCount: 0,
+    storyCount: 0,
     createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
   };
   channelsDB.push(mayaResearchChannel);
 
-  const initialPosts = [
+  const initialStories = [
     {
       userId: 1,
       content: 'Just shipped a new feature that reduces API response time by 40%! Sometimes the best optimizations come from questioning your assumptions. What\'s your recent win?',
@@ -173,27 +191,27 @@ export const initializeDB = () => {
     },
   ];
 
-  initialPosts.forEach(post => {
-    const userChannel = channelsDB.find(c => c.userId === post.userId && c.isPrimary);
+  initialStories.forEach(story => {
+    const userChannel = channelsDB.find(c => c.userId === story.userId && c.isPrimary);
     if (userChannel) {
-      postsDB.push({
-        id: nextPostId++,
-        userId: post.userId,
+      storiesDB.push({
+        id: nextStoryId++,
+        userId: story.userId,
         channelId: userChannel.id,
-        content: post.content,
-        timestamp: formatTimestamp(post.createdAt),
-        createdAt: post.createdAt,
+        content: story.content,
+        timestamp: formatTimestamp(story.createdAt),
+        createdAt: story.createdAt,
         likes: Math.floor(Math.random() * 200),
         comments: Math.floor(Math.random() * 50),
         likedBy: Math.random() > 0.5 ? [1] : [],
       });
-      userChannel.postCount++;
+      userChannel.storyCount++;
     }
   });
 
-  // Add mock comments to posts
+  // Add mock comments to stories
   const mockComments = [
-    // Comments for post 1 (Sarah's optimization post)
+    // Comments for story 1 (Sarah's optimization story)
     {
       parentId: 1,
       userId: 2,
@@ -307,12 +325,12 @@ export const initializeDB = () => {
   ];
 
   mockComments.forEach(comment => {
-    const parentPost = postsDB.find(p => p.id === comment.parentId);
-    if (parentPost) {
-      postsDB.push({
-        id: nextPostId++,
+    const parentStory = storiesDB.find(p => p.id === comment.parentId);
+    if (parentStory) {
+      storiesDB.push({
+        id: nextStoryId++,
         userId: comment.userId,
-        channelId: parentPost.channelId,
+        channelId: parentStory.channelId,
         parentId: comment.parentId,
         content: comment.content,
         timestamp: formatTimestamp(comment.createdAt),
@@ -372,10 +390,10 @@ export const initializeDB = () => {
   ];
 
   nestedReplies.forEach(reply => {
-    const parentComment = postsDB.find(p => p.id === reply.parentId);
+    const parentComment = storiesDB.find(p => p.id === reply.parentId);
     if (parentComment) {
-      postsDB.push({
-        id: nextPostId++,
+      storiesDB.push({
+        id: nextStoryId++,
         userId: reply.userId,
         channelId: parentComment.channelId,
         parentId: reply.parentId,
@@ -434,6 +452,9 @@ export const initializeDB = () => {
       });
     });
   }
+
+  // Mark as initialized to prevent duplicate initialization
+  isInitialized = true;
 };
 
 // ============================================
@@ -452,10 +473,10 @@ export class ActivitySimulator {
     this.interval = window.setInterval(() => {
       const actions: Activity['action'][] = ['like', 'unlike', 'comment'];
       const action = actions[Math.floor(Math.random() * actions.length)];
-      const postId = Math.floor(Math.random() * 10) + 1;
+      const storyId = Math.floor(Math.random() * 10) + 1;
       const userId = Math.floor(Math.random() * 5) + 1;
 
-      this.callback({ action, postId, userId });
+      this.callback({ action, storyId, userId });
     }, Math.random() * 5000 + 3000);
   }
 
@@ -477,23 +498,23 @@ export class MockServer {
     this.lastHydrationTime = Date.now();
   }
 
-  async fetchHydration(currentPosts: Post[]): Promise<HydrationPayload> {
+  async fetchHydration(currentStories: Story[]): Promise<HydrationPayload> {
     await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
 
-    const updates: PostUpdate[] = [];
-    const newPosts: Post[] = [];
-    const deletedPostIds: number[] = [];
+    const updates: StoryUpdate[] = [];
+    const newStories: Story[] = [];
+    const deletedStoryIds: number[] = [];
 
-    currentPosts.forEach(post => {
+    currentStories.forEach(story => {
       if (Math.random() > 0.7) {
         const likeChange = Math.floor(Math.random() * 10) - 3;
         const commentChange = Math.random() > 0.7 ? Math.floor(Math.random() * 3) : 0;
 
         updates.push({
-          id: post.id,
-          likes: Math.max(0, post.likes + likeChange),
-          comments: post.comments + commentChange,
-          likedBy: post.likedBy,
+          id: story.id,
+          likes: Math.max(0, story.likes + likeChange),
+          comments: story.comments + commentChange,
+          likedBy: story.likedBy,
         });
       }
     });
@@ -501,10 +522,10 @@ export class MockServer {
     return {
       timestamp: Date.now(),
       updates,
-      newPosts,
-      deletedPostIds,
-      message: updates.length > 0 || newPosts.length > 0 || deletedPostIds.length > 0
-        ? `Updated ${updates.length} post${updates.length !== 1 ? 's' : ''}, added ${newPosts.length} new post${newPosts.length !== 1 ? 's' : ''}, removed ${deletedPostIds.length} post${deletedPostIds.length !== 1 ? 's' : ''}`
+      newStories,
+      deletedStoryIds,
+      message: updates.length > 0 || newStories.length > 0 || deletedStoryIds.length > 0
+        ? `Updated ${updates.length} stor${updates.length !== 1 ? 'ies' : 'y'}, added ${newStories.length} new stor${newStories.length !== 1 ? 'ies' : 'y'}, removed ${deletedStoryIds.length} stor${deletedStoryIds.length !== 1 ? 'ies' : 'y'}`
         : 'Feed is up to date',
     };
   }

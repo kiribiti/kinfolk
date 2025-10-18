@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { formatTimestamp, initializeDB, channelsDB, postsDB, mockUsers } from './mockData';
+import { formatTimestamp, initializeDB, channelsDB, storiesDB, mockUsers } from './mockData';
 
 describe('formatTimestamp', () => {
   it('should return "Just now" for very recent dates', () => {
@@ -33,8 +33,8 @@ describe('initializeDB', () => {
   beforeEach(() => {
     // Clear databases
     channelsDB.length = 0;
-    postsDB.length = 0;
-    // Note: nextPostId and nextChannelId are reset inside initializeDB
+    storiesDB.length = 0;
+    // Note: nextStoryId and nextChannelId are reset inside initializeDB
   });
 
   it('should create channels for all users', () => {
@@ -61,38 +61,38 @@ describe('initializeDB', () => {
     });
   });
 
-  it('should create initial posts', () => {
+  it('should create initial stories', () => {
     initializeDB();
 
-    expect(postsDB.length).toBeGreaterThan(0);
+    expect(storiesDB.length).toBeGreaterThan(0);
   });
 
-  it('should create posts with proper structure', () => {
+  it('should create stories with proper structure', () => {
     initializeDB();
 
-    const post = postsDB[0];
-    expect(post).toHaveProperty('id');
-    expect(post).toHaveProperty('userId');
-    expect(post).toHaveProperty('channelId');
-    expect(post).toHaveProperty('content');
-    expect(post).toHaveProperty('timestamp');
-    expect(post).toHaveProperty('likes');
-    expect(post).toHaveProperty('comments');
-    expect(post).toHaveProperty('likedBy');
+    const story = storiesDB[0];
+    expect(story).toHaveProperty('id');
+    expect(story).toHaveProperty('userId');
+    expect(story).toHaveProperty('channelId');
+    expect(story).toHaveProperty('content');
+    expect(story).toHaveProperty('timestamp');
+    expect(story).toHaveProperty('likes');
+    expect(story).toHaveProperty('comments');
+    expect(story).toHaveProperty('likedBy');
   });
 
   it('should create comments with parentId', () => {
     initializeDB();
 
-    // Filter for posts that have a parentId (comments)
-    const comments = postsDB.filter(p => p.parentId !== undefined && p.parentId !== null);
+    // Filter for stories that have a parentId (comments)
+    const comments = storiesDB.filter(p => p.parentId !== undefined && p.parentId !== null);
 
     // We should have mock comments and nested replies
     expect(comments.length).toBeGreaterThan(0);
 
     // Verify each comment has a valid parent
     comments.forEach(comment => {
-      const parent = postsDB.find(p => p.id === comment.parentId);
+      const parent = storiesDB.find(p => p.id === comment.parentId);
       expect(parent).toBeDefined();
       expect(parent?.id).toBe(comment.parentId);
     });
