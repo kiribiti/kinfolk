@@ -1,0 +1,124 @@
+// Prisma schema for Kinfolk API
+// SQLite database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int            @id @default(autoincrement())
+  username        String         @unique
+  email           String         @unique
+  passwordHash    String
+  name            String
+  avatar          String         @default("👤")
+  verified        Boolean        @default(false)
+  themeId         String?
+  bio             String?
+  location        String?
+  website         String?
+  joinedDate      String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  channels        Channel[]      @relation("ChannelOwner")
+  stories         Story[]
+  likes           Like[]
+  subscriptions   Subscription[] @relation("UserSubscriptions")
+}
+
+model Channel {
+  id              Int            @id @default(autoincrement())
+  platformId      Int            @default(1)
+  userId          Int
+  name            String
+  description     String?
+  isPrimary       Boolean        @default(false)
+  isPrivate       Boolean        @default(false)
+  subscriberCount Int            @default(0)
+  storyCount      Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  user            User           @relation("ChannelOwner", fields: [userId], references: [id], onDelete: Cascade)
+  stories         Story[]
+  subscriptions   Subscription[]
+
+  @@index([userId])
+}
+
+model Story {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  channelId   Int
+  parentId    Int?      // For comments/replies
+  content     String
+  likes       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel     Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  parent      Story?    @relation("StoryReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Story[]   @relation("StoryReplies")
+  likedBy     Like[]
+  media       Media[]
+
+  @@index([userId])
+  @@index([channelId])
+  @@index([parentId])
+  @@index([createdAt])
+}
+
+model Like {
+  userId    Int
+  storyId   Int
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, storyId])
+  @@index([storyId])
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  storyId   Int
+  type      String   // 'image' or 'video'
+  url       String
+  thumbnail String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId])
+}
+
+model Subscription {
+  id             Int       @id @default(autoincrement())
+  subscriberId   Int
+  channelId      Int
+  status         String    @default("active") // 'active', 'pending', 'denied'
+  requestMessage String?
+  createdAt      DateTime  @default(now())
+  approvedAt     DateTime?
+
+  // Relations
+  subscriber     User      @relation("UserSubscriptions", fields: [subscriberId], references: [id], onDelete: Cascade)
+  channel        Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriberId, channelId])
+  @@index([channelId])
+  @@index([subscriberId])
+}
