@@ -12,7 +12,10 @@ import {
     Lock,
     Globe,
     ChevronDown,
-    MessageCircle
+    MessageCircle,
+    LogIn,
+    LogOut,
+    Menu
 } from 'lucide-react';
 
 // Import types
@@ -21,15 +24,13 @@ import {Theme, themes, Story, MediaFile, Channel, User, TabType} from './types';
 // Import data and utilities
 import {
     mockUsers,
-    channelsDB,
-    storiesDB,
     initializeDB,
     ActivitySimulator,
     MockServer,
 } from './data/mockData';
 
 // Import API
-import {ApiService as api} from './api';
+import {ApiService as api, getAuthToken, clearAuthToken} from './api';
 
 // Import localStorage utilities
 import {saveThemeToLocalStorage, loadThemeFromLocalStorage} from './utils/localStorage';
@@ -41,6 +42,7 @@ import {Sidebar} from './components/Sidebar';
 import {StoryComponent} from './components/StoryComponent';
 import {ChannelManager} from './components/ChannelManager';
 import {ProfileScreen} from './components/ProfileScreen';
+import {LoginModal} from './components/LoginModal';
 
 // ============================================
 // MAIN APP
@@ -82,26 +84,34 @@ const App: React.FC = () => {
     const [selectedChannelId, setSelectedChannelId] = useState<number | null>(null);
     const [showChannelManager, setShowChannelManager] = useState(false);
     const [showChannelSelector, setShowChannelSelector] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getAuthToken());
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
-    // Initialize database and load stories
+    // Initialize and load data from API
     useEffect(() => {
-        initializeDB();
-        setChannels([...channelsDB]);
+        initializeDB(); // Still needed for mock users temporarily
         loadStories();
-
-        // Set default channel for current user
-        const userDefaultChannel = channelsDB.find(
-            c => c.userId === currentUser.id && c.isPrimary
-        );
-        if (userDefaultChannel) {
-            setSelectedChannelId(userDefaultChannel.id);
-        }
+        loadChannels();
     }, []);
 
     const loadStories = async () => {
         const response = await api.getStories();
         if (response.success && response.data) {
             setStories(response.data);
+        }
+    };
+
+    const loadChannels = async () => {
+        const response = await api.getChannels(currentUser.id);
+        if (response.success && response.data) {
+            setChannels(response.data);
+
+            // Set default channel to primary channel
+            const primaryChannel = response.data.find((c: Channel) => c.isPrimary);
+            if (primaryChannel) {
+                setSelectedChannelId(primaryChannel.id);
+            }
         }
     };
 
@@ -184,34 +194,32 @@ const App: React.FC = () => {
         setMediaFiles(prev => prev.filter(file => file.id !== id));
     };
 
-    const handleChannelCreated = (channel: Channel) => {
-        channelsDB.push(channel);
-        setChannels([...channelsDB]);
+    const handleChannelCreated = async (channel: Channel) => {
+        // Reload channels from API to get the latest data
+        await loadChannels();
         showNotification(`Channel "${channel.name}" created! ✨`);
     };
 
-    const handleChannelUpdated = (updated: Channel) => {
-        const index = channelsDB.findIndex(c => c.id === updated.id);
-        if (index !== -1) {
-            channelsDB[index] = updated;
-            setChannels([...channelsDB]);
-            showNotification(`Channel "${updated.name}" updated! ✏️`);
-        }
+    const handleChannelUpdated = async (updated: Channel) => {
+        // Reload channels from API to get the latest data
+        await loadChannels();
+        showNotification(`Channel "${updated.name}" updated! ✏️`);
     };
 
-    const handleChannelDeleted = (channelId: number) => {
-        // Update channels DB in place
-        const channelIndex = channelsDB.findIndex(c => c.id === channelId);
-        if (channelIndex !== -1) {
-            channelsDB.splice(channelIndex, 1);
-        }
-        setChannels([...channelsDB]);
+    const handleChannelDeleted = async (channelId: number) => {
+        // Reload channels and stories from API to get the latest data
+        await loadChannels();
+        await loadStories();
 
-        // Delete stories from this channel
-        const storiesToKeep = storiesDB.filter(p => p.channelId !== channelId);
-        storiesDB.length = 0;
-        storiesDB.push(...storiesToKeep);
-        setStories([...storiesDB]);
+        // Clear selected channel if it was the deleted one
+        if (selectedChannelId === channelId) {
+            const primaryChannel = channels.find(c => c.isPrimary);
+            if (primaryChannel) {
+                setSelectedChannelId(primaryChannel.id);
+            } else {
+                setSelectedChannelId(null);
+            }
+        }
 
         showNotification('Channel deleted! 🗑️');
     };
@@ -330,6 +338,21 @@ const App: React.FC = () => {
             console.warn('Failed to save theme to user profile:', error);
             showNotification('Theme applied locally');
         }
+    };
+
+    const handleLogin = () => {
+        setShowLoginModal(true);
+    };
+
+    const handleLoginSuccess = (user: User) => {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+    };
+
+    const handleLogout = () => {
+        clearAuthToken();
+        setIsAuthenticated(false);
+        showNotification('Logged out successfully');
     };
 
     const handleViewProfile = (userId: number) => {
@@ -510,6 +533,38 @@ const App: React.FC = () => {
                                 />
                             </div>
 
+                            {/* Mobile Sidebar Toggle - visible only on mobile/tablet */}
+                            <button
+                                onClick={() => setShowMobileSidebar(true)}
+                                className="lg:hidden p-2 rounded-lg transition-colors"
+                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = currentTheme.id === 'midnight' ? '#3C3C3E' : '#F3F4F6'}
+                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                title="Open sidebar"
+                            >
+                                <Menu className="w-5 h-5" style={{ color: currentTheme.text }} />
+                            </button>
+
+                            {isAuthenticated ? (
+                                <button
+                                    onClick={handleLogout}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors hover:bg-gray-100"
+                                    title="Logout"
+                                    style={{color: currentTheme.text}}
+                                >
+                                    <LogOut className="w-5 h-5"/>
+                                    <span className="hidden md:inline text-sm font-medium">Logout</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleLogin}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors text-white"
+                                    style={{backgroundColor: currentTheme.primary}}
+                                >
+                                    <LogIn className="w-5 h-5"/>
+                                    <span>Login</span>
+                                </button>
+                            )}
+
                             <button
                                 onClick={() => setShowThemeSelector(true)}
                                 className="p-2 rounded-lg transition-colors hover:bg-gray-100"
@@ -542,6 +597,43 @@ const App: React.FC = () => {
                     onChannelUpdated={handleChannelUpdated}
                     onChannelDeleted={handleChannelDeleted}
                 />
+            )}
+
+            {showLoginModal && (
+                <LoginModal
+                    theme={currentTheme}
+                    onClose={() => setShowLoginModal(false)}
+                    onLoginSuccess={handleLoginSuccess}
+                    showNotification={showNotification}
+                />
+            )}
+
+            {/* Mobile Sidebar Drawer */}
+            {showMobileSidebar && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                        onClick={() => setShowMobileSidebar(false)}
+                    />
+                    {/* Sidebar Drawer */}
+                    <div className="fixed top-0 right-0 h-full w-80 max-w-[85vw] z-50 lg:hidden overflow-y-auto shadow-2xl"
+                        style={{
+                            backgroundColor: currentTheme.id === 'midnight' ? '#1C1C1E' : '#FFFFFF'
+                        }}
+                    >
+                        <div className="p-4">
+                            <Sidebar
+                                currentUser={currentUser}
+                                lastHydration={lastHydration}
+                                onHydrate={handleHydration}
+                                isHydrating={isHydrating}
+                                theme={currentTheme}
+                                onClose={() => setShowMobileSidebar(false)}
+                            />
+                        </div>
+                    </div>
+                </>
             )}
 
             {(hydrationMessage || notification) && (

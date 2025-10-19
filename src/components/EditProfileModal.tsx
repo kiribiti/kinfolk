@@ -42,7 +42,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-sm font-bold" style={{ color: theme.text }}>Edit Profile</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg transition-colors"
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.id === 'midnight' ? '#3C3C3E' : '#F3F4F6'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
             <X className="w-6 h-6" style={{ color: theme.text }} />
           </button>
         </div>

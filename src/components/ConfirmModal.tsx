@@ -26,7 +26,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         backgroundColor: theme.id === 'midnight' ? '#2C2C2E' : '#FFFFFF'
       }}>
         <h3 className="text-xl font-bold mb-3" style={{ color: theme.text }}>{title}</h3>
-        <p className="text-gray-600 mb-6">{message}</p>
+        <p className="mb-6" style={{ color: theme.id === 'midnight' ? '#9CA3AF' : '#6B7280' }}>{message}</p>
 
         <div className="flex gap-3 justify-end">
           <button

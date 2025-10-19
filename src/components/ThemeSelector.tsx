@@ -11,11 +11,18 @@ interface ThemeSelectorProps {
 export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ currentTheme, onThemeChange, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6">
+      <div className="rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6" style={{
+        backgroundColor: currentTheme.id === 'midnight' ? '#2C2C2E' : '#FFFFFF'
+      }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold" style={{ color: currentTheme.text }}>Choose Your Theme</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-            <X className="w-6 h-6" />
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg transition-colors"
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = currentTheme.id === 'midnight' ? '#3C3C3E' : '#F3F4F6'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <X className="w-6 h-6" style={{ color: currentTheme.text }} />
           </button>
         </div>
 
@@ -51,7 +58,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ currentTheme, onTh
               </div>
 
               <div className="text-left text-sm rounded p-2" style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: theme.id === 'midnight' ? '#1C1C1E' : '#ffffff',
                 color: theme.text,
                 borderLeft: `4px solid ${theme.primary}`
               }}>

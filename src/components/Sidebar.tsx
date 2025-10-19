@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { User, Theme } from '../types';
 import { mockUsers } from '../data/mockData';
 import { Avatar } from './Avatar';
@@ -10,13 +10,28 @@ interface SidebarProps {
   onHydrate: () => void;
   isHydrating: boolean;
   theme: Theme;
+  onClose?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentUser, lastHydration, onHydrate, isHydrating, theme }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentUser, lastHydration, onHydrate, isHydrating, theme, onClose }) => {
   const suggestions = mockUsers.slice(1, 4);
 
   return (
     <div className="space-y-6">
+      {/* Close button for mobile */}
+      {onClose && (
+        <div className="flex justify-end lg:hidden mb-2">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg transition-colors"
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.id === 'midnight' ? '#3C3C3E' : '#F3F4F6'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            aria-label="Close sidebar"
+          >
+            <X className="w-6 h-6" style={{ color: theme.text }} />
+          </button>
+        </div>
+      )}
       <div className="rounded-lg border p-4" style={{
         backgroundColor: theme.background,
         borderColor: theme.accent

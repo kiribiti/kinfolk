@@ -125,7 +125,12 @@ export const ChannelManager: React.FC<ChannelManagerProps> = ({
         }}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold" style={{ color: theme.text }}>Manage Channels</h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg transition-colors"
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.id === 'midnight' ? '#3C3C3E' : '#F3F4F6'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
               <X className="w-6 h-6" style={{ color: theme.text }} />
             </button>
           </div>
@@ -166,11 +171,13 @@ export const ChannelManager: React.FC<ChannelManagerProps> = ({
                     </div>
                     <button
                       onClick={() => setViewingSubscribersChannel(channel)}
-                      className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
+                      className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
                       style={{
                         borderColor: theme.accent,
                         color: theme.primary
                       }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.id === 'midnight' ? '#3C3C3E' : '#F9FAFB'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <UserIcon className="w-3 h-3 inline mr-1" />
                       View Subscribers
@@ -179,15 +186,19 @@ export const ChannelManager: React.FC<ChannelManagerProps> = ({
                   <div className="flex gap-2">
                     <button
                       onClick={() => startEdit(channel)}
-                      className="p-2 hover:bg-gray-100 rounded"
+                      className="p-2 rounded transition-colors"
                       style={{ color: theme.text }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.id === 'midnight' ? '#3C3C3E' : '#F3F4F6'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     {!channel.isPrimary && (
                       <button
                         onClick={() => handleDelete(channel)}
-                        className="p-2 hover:bg-red-50 rounded text-red-600"
+                        className="p-2 rounded transition-colors text-red-600"
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.id === 'midnight' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(254, 226, 226, 1)'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

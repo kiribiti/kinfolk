@@ -1,290 +1,382 @@
-import { Story, User, MediaFile, Subscription } from '../types';
-import { storiesDB, channelsDB, subscriptionsDB, mockUsers, formatTimestamp } from '../data/mockData';
+import axios, { AxiosError } from 'axios';
+import { Story, User, MediaFile } from '../types';
 
-const simulateDelay = (min = 300, max = 800): Promise<void> => {
-  return new Promise(resolve =>
-    setTimeout(resolve, Math.random() * (max - min) + min)
-  );
+// API Configuration
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Token management
+const TOKEN_KEY = 'kinfolk-auth-token';
+
+export const setAuthToken = (token: string) => {
+  localStorage.setItem(TOKEN_KEY, token);
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 };
+
+export const getAuthToken = (): string | null => {
+  return localStorage.getItem(TOKEN_KEY);
+};
+
+export const clearAuthToken = () => {
+  localStorage.removeItem(TOKEN_KEY);
+  delete api.defaults.headers.common['Authorization'];
+};
+
+// Initialize token from localStorage on app start
+const storedToken = getAuthToken();
+if (storedToken) {
+  api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+}
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - clear it
+      clearAuthToken();
+      // You might want to redirect to login here
+    }
+    return Promise.reject(error);
+  }
+);
+
+// API Response types
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
 
 export const ApiService = {
-  async getStories() {
-    await simulateDelay();
-    return {
-      success: true,
-      data: storiesDB.map(story => ({
-        ...story,
-        timestamp: formatTimestamp(story.createdAt || new Date()),
-      })),
-    };
-  },
+  // Authentication
+  async login(email: string, password: string): Promise<ApiResponse<{ user: User; token: string }>> {
+    try {
+      const response = await api.post<ApiResponse<{ user: User; token: string }>>('/api/auth/login', {
+        email,
+        password,
+      });
 
-  async createStory(userId: number, content: string, media?: MediaFile[], channelId?: number, parentId?: number) {
-    await simulateDelay(400, 1000);
-
-    if (!content || content.trim().length === 0) {
-      return { success: false, error: 'Story content cannot be empty' };
-    }
-    if (content.length > 500) {
-      return { success: false, error: 'Story content must be 500 characters or less' };
-    }
-    if (!channelId) {
-      return { success: false, error: 'Channel ID is required' };
-    }
-
-    // If parentId is provided, verify the parent story exists
-    if (parentId) {
-      const parentStory = storiesDB.find(p => p.id === parentId);
-      if (!parentStory) {
-        return { success: false, error: 'Parent story not found' };
+      if (response.data.success && response.data.data?.token) {
+        setAuthToken(response.data.data.token);
       }
-    }
 
-    const newStory: Story = {
-      id: Date.now(),
-      userId,
-      channelId,
-      parentId,
-      content: content.trim(),
-      timestamp: 'Just now',
-      createdAt: new Date(),
-      likes: 0,
-      comments: 0,
-      likedBy: [],
-      media: media || [],
-    };
-
-    storiesDB.unshift(newStory);
-    return { success: true, data: newStory, message: parentId ? 'Comment created successfully' : 'Story created successfully' };
-  },
-
-  async updateStory(storyId: number, content: string) {
-    await simulateDelay(400, 800);
-
-    const storyIndex = storiesDB.findIndex(p => p.id === storyId);
-    if (storyIndex === -1) {
-      return { success: false, error: 'Story not found' };
-    }
-
-    if (content.length > 500) {
-      return { success: false, error: 'Story content must be 500 characters or less' };
-    }
-
-    storiesDB[storyIndex] = {
-      ...storiesDB[storyIndex],
-      content: content.trim(),
-    };
-
-    return {
-      success: true,
-      data: {
-        ...storiesDB[storyIndex],
-        timestamp: formatTimestamp(storiesDB[storyIndex].createdAt || new Date()),
-      },
-      message: 'Story updated successfully',
-    };
-  },
-
-  async deleteStory(storyId: number, userId: number) {
-    await simulateDelay(300, 600);
-
-    const storyIndex = storiesDB.findIndex(p => p.id === storyId);
-    if (storyIndex === -1) {
-      return { success: false, error: 'Story not found' };
-    }
-
-    if (storiesDB[storyIndex].userId !== userId) {
-      return { success: false, error: 'Unauthorized: You can only delete your own stories' };
-    }
-
-    storiesDB.splice(storyIndex, 1);
-    return { success: true, message: 'Story deleted successfully' };
-  },
-
-  async toggleLike(storyId: number, userId: number) {
-    await simulateDelay(200, 400);
-
-    const storyIndex = storiesDB.findIndex(p => p.id === storyId);
-    if (storyIndex === -1) {
-      return { success: false, error: 'Story not found' };
-    }
-
-    const story = storiesDB[storyIndex];
-    const isLiked = story.likedBy.includes(userId);
-
-    storiesDB[storyIndex] = {
-      ...story,
-      likes: isLiked ? story.likes - 1 : story.likes + 1,
-      likedBy: isLiked
-        ? story.likedBy.filter(id => id !== userId)
-        : [...story.likedBy, userId],
-    };
-
-    return {
-      success: true,
-      data: {
-        ...storiesDB[storyIndex],
-        timestamp: formatTimestamp(storiesDB[storyIndex].createdAt || new Date()),
-      },
-      liked: !isLiked,
-    };
-  },
-
-  async subscribeToChannel(userId: number, channelId: number) {
-    await simulateDelay(300, 600);
-
-    const channel = channelsDB.find(c => c.id === channelId);
-    if (!channel) {
-      return { success: false, error: 'Channel not found' };
-    }
-
-    if (channel.userId === userId) {
-      return { success: false, error: 'Cannot subscribe to your own channel' };
-    }
-
-    const existingSubscription = subscriptionsDB.find(
-      s => s.subscriberId === userId && s.channelId === channelId && s.status !== 'denied'
-    );
-
-    if (existingSubscription) {
-      return { success: false, error: 'Already subscribed or pending' };
-    }
-
-    const newSubscription: Subscription = {
-      id: Date.now(),
-      subscriberId: userId,
-      channelId,
-      status: channel.isPrivate ? 'pending' : 'active',
-      createdAt: new Date(),
-      approvedAt: channel.isPrivate ? undefined : new Date(),
-    };
-
-    subscriptionsDB.push(newSubscription);
-
-    if (!channel.isPrivate) {
-      channel.subscriberCount++;
-    }
-
-    return {
-      success: true,
-      data: newSubscription,
-      message: channel.isPrivate ? 'Subscription request sent' : 'Subscribed successfully',
-    };
-  },
-
-  async unsubscribeFromChannel(userId: number, channelId: number) {
-    await simulateDelay(300, 600);
-
-    const subscriptionIndex = subscriptionsDB.findIndex(
-      s => s.subscriberId === userId && s.channelId === channelId
-    );
-
-    if (subscriptionIndex === -1) {
-      return { success: false, error: 'Subscription not found' };
-    }
-
-    const subscription = subscriptionsDB[subscriptionIndex];
-    subscriptionsDB.splice(subscriptionIndex, 1);
-
-    if (subscription.status === 'active') {
-      const channel = channelsDB.find(c => c.id === channelId);
-      if (channel) {
-        channel.subscriberCount = Math.max(0, channel.subscriberCount - 1);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
       }
+      return { success: false, error: 'Network error. Please try again.' };
     }
-
-    return { success: true, message: 'Unsubscribed successfully' };
   },
 
-  async getChannelSubscribers(channelId: number) {
-    await simulateDelay(200, 400);
+  async register(username: string, email: string, password: string, name: string): Promise<ApiResponse<{ user: User; token: string }>> {
+    try {
+      const response = await api.post<ApiResponse<{ user: User; token: string }>>('/api/auth/register', {
+        username,
+        email,
+        password,
+        name,
+      });
 
-    const channel = channelsDB.find(c => c.id === channelId);
-    if (!channel) {
-      return { success: false, error: 'Channel not found' };
-    }
-
-    const subscribers = subscriptionsDB
-      .filter(s => s.channelId === channelId && s.status === 'active')
-      .map(s => {
-        const user = mockUsers.find(u => u.id === s.subscriberId);
-        return user ? { ...user, subscribedAt: s.approvedAt } : null;
-      })
-      .filter(u => u !== null);
-
-    return { success: true, data: subscribers };
-  },
-
-  async removeSubscriber(channelId: number, subscriberId: number, channelOwnerId: number) {
-    await simulateDelay(300, 600);
-
-    const channel = channelsDB.find(c => c.id === channelId);
-    if (!channel) {
-      return { success: false, error: 'Channel not found' };
-    }
-
-    if (channel.userId !== channelOwnerId) {
-      return { success: false, error: 'Unauthorized: Only channel owner can remove subscribers' };
-    }
-
-    const subscriptionIndex = subscriptionsDB.findIndex(
-      s => s.subscriberId === subscriberId && s.channelId === channelId && s.status === 'active'
-    );
-
-    if (subscriptionIndex === -1) {
-      return { success: false, error: 'Subscriber not found' };
-    }
-
-    subscriptionsDB.splice(subscriptionIndex, 1);
-    channel.subscriberCount = Math.max(0, channel.subscriberCount - 1);
-
-    return { success: true, message: 'Subscriber removed successfully' };
-  },
-
-  async updateUserProfile(userId: number, updates: Partial<Pick<User, 'name' | 'bio' | 'location' | 'website'>>) {
-    await simulateDelay(300, 600);
-
-    const userIndex = mockUsers.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      return { success: false, error: 'User not found' };
-    }
-
-    // Validate name if provided
-    if (updates.name !== undefined) {
-      if (!updates.name || updates.name.trim().length === 0) {
-        return { success: false, error: 'Name cannot be empty' };
+      if (response.data.success && response.data.data?.token) {
+        setAuthToken(response.data.data.token);
       }
-      if (updates.name.length > 50) {
-        return { success: false, error: 'Name must be 50 characters or less' };
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
       }
+      return { success: false, error: 'Network error. Please try again.' };
     }
+  },
 
-    // Validate bio if provided
-    if (updates.bio !== undefined && updates.bio.length > 200) {
-      return { success: false, error: 'Bio must be 200 characters or less' };
+  logout() {
+    clearAuthToken();
+  },
+
+  // Stories
+  async getStories(): Promise<ApiResponse<Story[]>> {
+    try {
+      const response = await api.get<ApiResponse<Story[]>>('/api/stories');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to fetch stories' };
     }
+  },
 
-    // Validate location if provided
-    if (updates.location !== undefined && updates.location.length > 100) {
-      return { success: false, error: 'Location must be 100 characters or less' };
+  async createStory(
+    userId: number,
+    content: string,
+    media?: MediaFile[],
+    channelId?: number,
+    parentId?: number
+  ): Promise<ApiResponse<Story>> {
+    try {
+      const response = await api.post<ApiResponse<Story>>('/api/stories', {
+        content,
+        channelId,
+        parentId,
+        media,
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to create story' };
     }
+  },
 
-    // Validate website if provided
-    if (updates.website !== undefined && updates.website.length > 100) {
-      return { success: false, error: 'Website must be 100 characters or less' };
+  async updateStory(storyId: number, content: string): Promise<ApiResponse<Story>> {
+    try {
+      const response = await api.put<ApiResponse<Story>>(`/api/stories/${storyId}`, {
+        content,
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to update story' };
     }
+  },
 
-    // Update user
-    mockUsers[userIndex] = {
-      ...mockUsers[userIndex],
-      ...updates,
-      name: updates.name?.trim() || mockUsers[userIndex].name,
-    };
+  async deleteStory(storyId: number, userId: number): Promise<ApiResponse> {
+    try {
+      const response = await api.delete<ApiResponse>(`/api/stories/${storyId}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to delete story' };
+    }
+  },
 
-    return {
-      success: true,
-      data: mockUsers[userIndex],
-      message: 'Profile updated successfully',
-    };
+  async toggleLike(storyId: number, userId: number): Promise<ApiResponse<Story>> {
+    try {
+      const response = await api.post<ApiResponse<Story>>(`/api/stories/${storyId}/like`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to toggle like' };
+    }
+  },
+
+  // Users
+  async getUserProfile(userId: number): Promise<ApiResponse<User>> {
+    try {
+      const response = await api.get<ApiResponse<User>>(`/api/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to fetch user profile' };
+    }
+  },
+
+  async updateUserProfile(
+    userId: number,
+    updates: Partial<Pick<User, 'name' | 'bio' | 'location' | 'website' | 'themeId'>>
+  ): Promise<ApiResponse<User>> {
+    try {
+      const response = await api.put<ApiResponse<User>>(`/api/users/${userId}`, updates);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to update profile' };
+    }
+  },
+
+  // Channels
+  async getChannels(userId?: number): Promise<ApiResponse> {
+    try {
+      const url = userId ? `/api/channels?userId=${userId}` : '/api/channels';
+      const response = await api.get<ApiResponse>(url);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to fetch channels' };
+    }
+  },
+
+  async getChannel(channelId: number): Promise<ApiResponse> {
+    try {
+      const response = await api.get<ApiResponse>(`/api/channels/${channelId}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to fetch channel' };
+    }
+  },
+
+  async createChannel(name: string, description?: string, isPrivate?: boolean): Promise<ApiResponse> {
+    try {
+      const response = await api.post<ApiResponse>('/api/channels', {
+        name,
+        description,
+        isPrivate,
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to create channel' };
+    }
+  },
+
+  async updateChannel(
+    channelId: number,
+    updates: { name?: string; description?: string; isPrivate?: boolean }
+  ): Promise<ApiResponse> {
+    try {
+      const response = await api.put<ApiResponse>(`/api/channels/${channelId}`, updates);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to update channel' };
+    }
+  },
+
+  async deleteChannel(channelId: number): Promise<ApiResponse> {
+    try {
+      const response = await api.delete<ApiResponse>(`/api/channels/${channelId}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to delete channel' };
+    }
+  },
+
+  async getChannelStories(channelId: number, page?: number, limit?: number): Promise<ApiResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (page) params.append('page', page.toString());
+      if (limit) params.append('limit', limit.toString());
+      const url = `/api/channels/${channelId}/stories${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await api.get<ApiResponse>(url);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to fetch channel stories' };
+    }
+  },
+
+  // Subscriptions
+  async subscribeToChannel(channelId: number): Promise<ApiResponse> {
+    try {
+      const response = await api.post<ApiResponse>(`/api/subscriptions/channels/${channelId}/subscribe`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to subscribe to channel' };
+    }
+  },
+
+  async unsubscribeFromChannel(channelId: number): Promise<ApiResponse> {
+    try {
+      const response = await api.post<ApiResponse>(`/api/subscriptions/channels/${channelId}/unsubscribe`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to unsubscribe from channel' };
+    }
+  },
+
+  async getChannelSubscribers(channelId: number): Promise<ApiResponse> {
+    try {
+      const response = await api.get<ApiResponse>(`/api/subscriptions/channels/${channelId}/subscribers`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to fetch channel subscribers' };
+    }
+  },
+
+  async removeSubscriber(channelId: number, subscriberId: number): Promise<ApiResponse> {
+    try {
+      const response = await api.delete<ApiResponse>(
+        `/api/subscriptions/channels/${channelId}/subscribers/${subscriberId}`
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to remove subscriber' };
+    }
+  },
+
+  async approveSubscription(subscriptionId: number): Promise<ApiResponse> {
+    try {
+      const response = await api.put<ApiResponse>(`/api/subscriptions/${subscriptionId}/approve`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to approve subscription' };
+    }
+  },
+
+  async rejectSubscription(subscriptionId: number): Promise<ApiResponse> {
+    try {
+      const response = await api.put<ApiResponse>(`/api/subscriptions/${subscriptionId}/reject`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to reject subscription' };
+    }
+  },
+
+  async getUserSubscriptions(): Promise<ApiResponse> {
+    try {
+      const response = await api.get<ApiResponse>('/api/subscriptions/user');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        return error.response.data;
+      }
+      return { success: false, error: 'Failed to fetch user subscriptions' };
+    }
   },
 };
+
+export default api;
